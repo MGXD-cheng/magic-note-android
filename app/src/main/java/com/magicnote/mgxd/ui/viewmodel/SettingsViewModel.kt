@@ -9,6 +9,7 @@ import java.net.HttpURLConnection
 import com.magicnote.mgxd.update.UpdateInfo
 import com.magicnote.mgxd.update.UpdateChecker
 import com.magicnote.mgxd.lan.LanSyncServer
+import com.magicnote.mgxd.ui.theme.ThemeModeBus
 import com.magicnote.mgxd.util.DiaryLock
 import com.magicnote.mgxd.data.prefs.UserPrefs
 import com.magicnote.mgxd.data.repo.AppRepository
@@ -234,6 +235,8 @@ class SettingsViewModel(private val repo: AppRepository) : ViewModel() {
     }
     /** 外观主题：system=跟随系统 / light=浅色 / dark=深色 */
     fun setThemeMode(mode: String) {
+        // 先写进程内即时值：主题在下一帧就切好，不必等 DataStore 异步落盘
+        ThemeModeBus.set(mode)
         viewModelScope.launch { repo.saveThemeMode(mode) }
     }
 
