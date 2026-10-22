@@ -34,6 +34,7 @@ import com.magicnote.mgxd.notify.NotificationHelper
 import com.magicnote.mgxd.notify.ReminderScheduler
 import com.magicnote.mgxd.ui.navigation.AppNav
 import com.magicnote.mgxd.ui.theme.MGTheme
+import com.magicnote.mgxd.ui.theme.ThemeModeBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,7 +67,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             // 外观主题：设置里的 跟随系统/浅色/深色
             val repo = (application as MGApp).container.repository
-            val themeMode by repo.themeMode.collectAsState(initial = "system")
+            val storedMode by repo.themeMode.collectAsState(initial = "system")
+            // 进程内即时值优先：点下主题就切，不必等 DataStore 的异步回调
+            val instantMode by ThemeModeBus.value.collectAsState()
+            val themeMode = instantMode ?: storedMode
             val darkTheme = when (themeMode) {
                 "dark" -> true
                 "light" -> false
@@ -116,7 +120,16 @@ class MainActivity : ComponentActivity() {
                 isAppearanceLightNavigationBars = !dark
             }
         }
-        // 3) 窗口底色：边到边时系统栏背后、以及主题切换过渡瞬间露出的颜色
+        // 3) 系统栏底色：华为/EMUI 等 ROM 在「透明状态栏」下有自己的一层绘制缓存，
+        //    只改图标深浅不够，显式设色才会随主题立刻重绘（Android 15 起强制 edge-to-edge，此属性失效）
+        @Suppress("DEPRECATION")
+        if (Build.VERSION.SDK_INT < 35) {
+            runCatching {
+                window.statusBarColor = windowBgArgb
+                window.navigationBarColor = windowBgArgb
+            }
+        }
+        // 4) 窗口底色：边到边时系统栏背后、以及主题切换过渡瞬间露出的颜色
         runCatching { window.decorView.setBackgroundColor(windowBgArgb) }
     }
 
