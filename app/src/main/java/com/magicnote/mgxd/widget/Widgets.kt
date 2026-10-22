@@ -48,6 +48,16 @@ class TodoWidgetProvider : AppWidgetProvider() {
         ids.forEach { render(context, mgr, it) }
     }
 
+    /** 用户拉伸/缩小小组件时立即重排（否则要等 30 分钟的周期刷新） */
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        mgr: AppWidgetManager,
+        widgetId: Int,
+        newOptions: android.os.Bundle
+    ) {
+        render(context, mgr, widgetId)
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_TOGGLE) {
@@ -89,7 +99,7 @@ class TodoWidgetProvider : AppWidgetProvider() {
                     val pending = repo.observeTodos().first()
                         .filter { !it.isLongTerm && !it.completed }
                         .sortedWith(compareBy({ it.dueTime ?: Long.MAX_VALUE }, { -it.priority }))
-                    val shown = pending.take(3)
+
                     val openTodoTab = openAppPendingIntent(context, 1)   // 直接进待办页
                     val openHomeTab = openAppPendingIntent(context, 0)
 
@@ -97,30 +107,35 @@ class TodoWidgetProvider : AppWidgetProvider() {
                         R.id.widget_todo_count,
                         if (pending.isEmpty()) "" else pending.size.toString() + " 项待办"
                     )
+
+                    // ===== 按小组件实际尺寸决定显示几条（空间利用率） =====
+                    // 固定开销 ≈ padding(10*2) + 标题行(18) + 间距(4+3) + 底部"查看全部"(14) ≈ 52dp
+                    val optH = mgr.getAppWidgetOptions(widgetId)
+                        .getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 110)
+                    val rows = ((optH - 52) / 24).coerceIn(1, 7)   // 每行至少 24dp
+                    val shown = pending.take(rows)
+
+                    views.removeAllViews(R.id.widget_todo_list)
+                    val hasItems = shown.isNotEmpty()
+                    views.setViewVisibility(
+                        R.id.widget_todo_list,
+                        if (hasItems) View.VISIBLE else View.GONE
+                    )
                     views.setViewVisibility(
                         R.id.widget_todo_empty,
-                        if (shown.isEmpty()) View.VISIBLE else View.GONE
+                        if (hasItems) View.GONE else View.VISIBLE
                     )
                     views.setTextViewText(R.id.widget_todo_empty, "今天没有待办，点这里加一条 ✨")
+                    views.setOnClickPendingIntent(R.id.widget_todo_empty, openTodoTab)
 
-                    val rows = listOf(
-                        Triple(R.id.widget_todo_row1, R.id.widget_todo_text1, R.id.widget_todo_check1),
-                        Triple(R.id.widget_todo_row2, R.id.widget_todo_text2, R.id.widget_todo_check2),
-                        Triple(R.id.widget_todo_row3, R.id.widget_todo_text3, R.id.widget_todo_check3)
-                    )
-                    rows.forEachIndexed { index, (rowId, textId, checkId) ->
-                        val todo = shown.getOrNull(index)
-                        if (todo == null) {
-                            views.setViewVisibility(rowId, View.GONE)
-                        } else {
-                            views.setViewVisibility(rowId, View.VISIBLE)
-                            views.setTextViewText(textId, todo.title)
-                            // 圆圈 → 直接完成；标题/行 → 进待办页（避免想看详情时误触完成）
-                            val toggle = toggleIntent(context, todo.id)
-                            views.setOnClickPendingIntent(checkId, toggle)
-                            views.setOnClickPendingIntent(textId, openTodoTab)
-                            views.setOnClickPendingIntent(rowId, openTodoTab)
-                        }
+                    shown.forEach { todo ->
+                        val item = RemoteViews(context.packageName, R.layout.widget_todo_item)
+                        item.setTextViewText(R.id.widget_item_text, todo.title)
+                        // 圆圈 → 直接完成；标题/整行 → 进待办页（避免想看详情时误触完成）
+                        item.setOnClickPendingIntent(R.id.widget_item_check, toggleIntent(context, todo.id))
+                        item.setOnClickPendingIntent(R.id.widget_item_text, openTodoTab)
+                        item.setOnClickPendingIntent(R.id.widget_item_row, openTodoTab)
+                        views.addView(R.id.widget_todo_list, item)
                     }
 
                     views.setOnClickPendingIntent(R.id.widget_todo_title, openTodoTab)
