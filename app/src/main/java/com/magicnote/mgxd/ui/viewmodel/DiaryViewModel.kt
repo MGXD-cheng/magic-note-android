@@ -123,6 +123,74 @@ class DiaryViewModel(
         }
     }
 
+    // ==================== AI 改写（编辑日记 / AI 笔记后继续提要求） ====================
+    private val _rewriting = MutableStateFlow(false)
+    val rewriting: StateFlow<Boolean> = _rewriting.asStateFlow()
+
+    /**
+     * 按用户要求改写正文（只返回结果，不落库；由编辑器预览后决定是否保存）
+     *
+     * @param onResult (新正文, 错误信息)，二者有且仅有一个非空
+     */
+    fun rewriteDiary(
+        title: String?,
+        content: String,
+        requirement: String,
+        onResult: (String?, String?) -> Unit
+    ) {
+        if (content.isBlank()) {
+            onResult(null, "正文是空的，先写点内容再让 AI 改")
+            return
+        }
+        if (_rewriting.value) return
+        viewModelScope.launch {
+            _rewriting.value = true
+            try {
+                val config = repo.aiConfig.collectFirst()
+                if (config.apiKey.isBlank()) {
+                    onResult(null, "还没配置 API Key，请先到「设置」页填写")
+                    return@launch
+                }
+                val personality = Personality.fromId(config.personalityId)
+                val prompt = AiPrompter.buildDiaryRewritePrompt(
+                    personality = personality,
+                    diaryTitle = title,
+                    diaryContent = content,
+                    requirement = requirement
+                )
+                val reply = withContext(Dispatchers.IO) {
+                    try {
+                        client.chat(
+                            baseUrl = config.baseUrl,
+                            apiKey = config.apiKey,
+                            model = config.model,
+                            messages = listOf(AiClient.ChatMessage("user", prompt)),
+                            timeoutSeconds = 90L
+                        )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                val clean = reply?.trim()
+                    ?.removePrefix("```markdown")?.removePrefix("```")
+                    ?.removeSuffix("```")?.trim()
+                if (clean.isNullOrBlank()) {
+                    onResult(null, "AI 没有返回内容，可以换个说法再试一次")
+                } else {
+                    onResult(clean, null)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                onResult(null, "改写失败：" + (e.message ?: "未知错误"))
+            } finally {
+                _rewriting.value = false
+            }
+        }
+    }
+
     fun delete(diary: DiaryEntity) {
         viewModelScope.launch {
             // 删除日记时顺带清理本地图片文件
