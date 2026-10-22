@@ -35,6 +35,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -135,7 +136,8 @@ class AiViewModel(private val repo: AppRepository) : ViewModel() {
 
                 // 历史上下文（Room 流异步更新，这里手动拼上刚发的消息，确保 AI 看得到）
                 val history = (_messages.value + ChatItem("user", text)).takeLast(12).map {
-                    AiClient.ChatMessage(role = it.role, content = it.content)
+                    // 每条历史都带上发送时间：AI 才能正确理解「刚才/今天/昨天」，整理笔记时也能标注日期
+                    AiClient.ChatMessage(role = it.role, content = chatStamp(it.timestamp) + it.content)
                 }
                 val allMessages = listOf(
                     AiClient.ChatMessage("system", systemPrompt)
@@ -196,6 +198,20 @@ class AiViewModel(private val repo: AppRepository) : ViewModel() {
     /** 笔记保存成功事件（单发提示，UI 读取后清空） */
     private val _noteSaved = MutableStateFlow<String?>(null)
     val noteSaved: StateFlow<String?> = _noteSaved.asStateFlow()
+
+    // ==================== 时间戳注入 ====================
+    private val stampFmtSameYear: DateTimeFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm")
+    private val stampFmtOtherYear: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+
+    /** 消息时间前缀：[MM-dd HH:mm]（跨年的消息带年份，避免 AI 误判为今年） */
+    private fun chatStamp(millis: Long): String {
+        val zdt = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault())
+        // 防御：异常时间戳（0 或未来很远）不加前缀，避免出现 [01-01 08:00] 这种噪音
+        val now = System.currentTimeMillis()
+        if (millis <= 0L || millis > now + 86_400_000L) return ""
+        val f = if (zdt.year == LocalDate.now().year) stampFmtSameYear else stampFmtOtherYear
+        return "[" + zdt.format(f) + "] "
+    }
 
     /** 本地预判：这条消息是否在要求「把聊天记录整理成笔记」 */
     fun looksLikeNoteRequest(text: String): Boolean {
@@ -328,7 +344,7 @@ class AiViewModel(private val repo: AppRepository) : ViewModel() {
             _noteSaved.value = title
             repo.insertChat(
                 "assistant",
-                "✅ 已保存到日记：「" + title + "」\n打开「日记」页就能看到，也可以继续让我修改。"
+                "✅ 已保存到日记：「" + title + "」\n打开「日记」页点开这篇，正文下方有「✨ AI 改写」，可以继续提要求让它重写。"
             )
         }
     }
@@ -360,7 +376,9 @@ class AiViewModel(private val repo: AppRepository) : ViewModel() {
         val sb = StringBuilder()
         for (m in list) {
             val who = if (m.role == "user") "我" else "AI"
-            sb.append(who).append('：').append(m.content.trim().replace('\n', ' ')).append('\n')
+            // 带上时间，笔记里才能写清「什么时候聊的」
+            sb.append(chatStamp(m.timestamp)).append(who).append('：')
+                .append(m.content.trim().replace('\n', ' ')).append('\n')
         }
         var text = sb.toString()
         if (text.length > 16_000) text = text.takeLast(16_000)
