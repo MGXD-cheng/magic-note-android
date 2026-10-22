@@ -6,21 +6,26 @@ import android.content.Intent
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -68,15 +73,15 @@ class MainActivity : ComponentActivity() {
                 else -> isSystemInDarkTheme()
             }
             MGTheme(darkTheme = darkTheme) {
-                // 手动切深色时同步状态栏图标深浅，避免图标看不清
+                // 主题切换时，系统栏图标 / 窗口底色必须和内容「同一帧」更新。
+                // 原来用 DisposableEffect（组合提交后才执行）→ 顶部状态栏会慢半拍，
+                // 这里改成 remember(key)：在组合阶段就同步到窗口，和主题颜色一起生效。
                 val view = LocalView.current
                 val context = LocalContext.current
-                DisposableEffect(darkTheme) {
-                    val activity = context as? Activity
-                    if (activity != null) {
-                        WindowCompat.getInsetsController(activity.window, view).isAppearanceLightStatusBars = !darkTheme
-                    }
-                    onDispose { }
+                val activity = context as? ComponentActivity
+                val windowBgArgb = MaterialTheme.colorScheme.surface.toArgb()
+                remember(darkTheme, windowBgArgb) {
+                    if (activity != null) applyWindowTheme(activity, view, darkTheme, windowBgArgb)
                 }
                 Surface(modifier = Modifier.fillMaxSize()) {
                     AppNav(initialTab = pendingTab.value)
@@ -84,6 +89,37 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    /**
+     * 把系统栏外观 + 窗口底色按当前主题同步一次。
+     *
+     * ⚠️ 必须在「组合阶段」调用（remember {}），放到 DisposableEffect / LaunchedEffect 里
+     * 会晚一帧执行，用户能看到状态栏（顶部）比界面内容慢一拍才变色。
+     */
+    private fun applyWindowTheme(
+        activity: ComponentActivity,
+        view: View,
+        dark: Boolean,
+        windowBgArgb: Int
+    ) {
+        val window = activity.window
+        // 1) 系统栏样式跟随「App 内主题」，而不是系统 uiMode（App 选深色 + 系统浅色时才不会错乱）
+        runCatching {
+            activity.enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { _ -> dark },
+                navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { _ -> dark }
+            )
+        }
+        // 2) 状态栏 / 导航栏图标深浅（深色主题用浅色图标，反之亦然）
+        runCatching {
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+        // 3) 窗口底色：边到边时系统栏背后、以及主题切换过渡瞬间露出的颜色
+        runCatching { window.decorView.setBackgroundColor(windowBgArgb) }
+    }
+
     /** .mgxd 文件关联：系统以 VIEW 打开 .mgxd 文件时读取内容并投递给 UI */
     private fun handleViewIntent(intent: Intent?) {
         if (intent?.action != Intent.ACTION_VIEW) return
