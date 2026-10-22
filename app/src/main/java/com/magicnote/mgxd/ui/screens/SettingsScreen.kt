@@ -435,8 +435,6 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 // 系统权限引导：通知权限（Android 13+）与精确闹钟权限（Android 12+）不足时提示，避免收不到每日汇总
                 val notifManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
                 val needNotifPerm = Build.VERSION.SDK_INT >= 33 && !notifManager.areNotificationsEnabled()
-                val needExactAlarm = Build.VERSION.SDK_INT >= 31 &&
-                    !(context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms())
                 if (needNotifPerm) {
                     Text(
                         "⚠️ 系统通知权限未开启，收不到每日汇总和待办提醒",
@@ -452,26 +450,6 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) { Text("去开启通知权限") }
-                }
-                if (needExactAlarm) {
-                    Text(
-                        "⚠️ 未授予「闹钟和提醒」权限，汇总可能被系统延迟。授予后每天准点发送",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(
-                                        Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                                        Uri.parse("package:${context.packageName}")
-                                    )
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) { Text("去授予精确闹钟权限") }
                 }
             }
 
@@ -775,21 +753,39 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 )
             }
 
-            // ===== 专注与免打扰 =====
+            // ===== 专注与免打扰（含精确提醒授权） =====
             SectionCard(title = "专注与免打扰", icon = Icons.Default.Notifications) {
                 val lifecycleOwner = LocalLifecycleOwner.current
                 var dndGranted by remember { mutableStateOf(DndHelper.isGranted(context)) }
-                // 从系统设置返回时自动刷新授权状态
+                // 「闹钟和提醒」权限：Android 12+ 才存在，12 以下恒为已授权
+                var exactGranted by remember {
+                    mutableStateOf(
+                        Build.VERSION.SDK_INT < 31 ||
+                            context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+                    )
+                }
+                // 从系统设置返回时自动刷新两项授权状态
                 DisposableEffect(lifecycleOwner) {
                     val obs = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_RESUME) dndGranted = DndHelper.isGranted(context)
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            dndGranted = DndHelper.isGranted(context)
+                            exactGranted = Build.VERSION.SDK_INT < 31 ||
+                                context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+                        }
                     }
                     lifecycleOwner.lifecycle.addObserver(obs)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(obs) }
                 }
+
+                // ---- 授权一：通知访问权限（专注模式自动切勿扰）----
+                Text(
+                    "① 专注模式自动勿扰",
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Text(
                     "进入日程「专注模式」时自动开启系统勿扰，退出时恢复原状态。",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -815,6 +811,69 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                     runCatching { context.startActivity(DndHelper.accessSettingsIntent()) }
                 }) {
                     Text(if (dndGranted) "打开系统勿扰设置" else "去授权")
+                }
+
+                // ---- 分隔线 ----
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
+                )
+                Spacer(Modifier.height(12.dp))
+
+                // ---- 授权二：闹钟和提醒（准点提醒）----
+                Text(
+                    "② 准点提醒",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    "待办、日程、打卡、每日汇总的到点提醒都走系统闹钟。未授权时系统会把提醒延后几分钟（日程可能已经开始才响），授权后准点触发。",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(
+                                if (exactGranted) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline,
+                                CircleShape
+                            )
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (exactGranted) "已获得「闹钟和提醒」权限，提醒准点触发"
+                        else "未获得「闹钟和提醒」权限，提醒可能被系统延迟",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                TextButton(onClick = {
+                    val pkg = Uri.parse("package:" + context.packageName)
+                    runCatching {
+                        context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, pkg))
+                    }.onFailure {
+                        // 少数 ROM 没有该页面 → 退回应用详情
+                        runCatching {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg)
+                            )
+                        }
+                    }
+                }) {
+                    Text(if (exactGranted) "打开系统闹钟与提醒设置" else "去授权")
+                }
+                if (Build.VERSION.SDK_INT < 31) {
+                    Text(
+                        "本机 Android 版本低于 12，无此权限项，提醒默认准点。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
             // ===== 关于与更新 =====
