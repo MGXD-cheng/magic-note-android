@@ -231,6 +231,7 @@ fun AppNav(initialTab: Int? = null) {
         EditDiaryDialog(
             defaultDate = today,
             existing = editDiaryTarget,
+            vm = diaryVm,
             onDismiss = {
                 showAddDiary = false
                 editDiaryTarget = null
