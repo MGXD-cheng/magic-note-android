@@ -275,6 +275,7 @@ object AiPrompter {
         appendLine("      <rule>只能引用下方 context 中真实存在的数据，禁止捏造待办、日程或日记。</rule>")
         appendLine("      <rule>用户询问安排时，主动给出优先级建议。</rule>")
         appendLine("      <rule>屏幕时间数据可用于分析使用习惯：给出健康提醒、娱乐/学习/社交占比观察、休息建议等（仅引用真实数据）。</rule>")
+        appendLine("      <rule>每条对话消息开头的 [MM-dd HH:mm] 是该消息的发送时间（跨年的会带年份）。回答「刚才/今天/昨天/上周」这类相对时间、以及整理笔记需要标注日期时，一律以此为准，绝不能凭感觉编时间。</rule>")
         appendLine("      <rule>用纯文本回答，不要输出 XML 标签。</rule>")
         appendLine("      <rule>如果用户要求创建/记录日程或待办，而下方 context 里没有出现新增项（说明自动创建未成功），必须如实回复「抱歉，自动创建没有成功」，并建议用户用简洁句式再试一次（例如：明天下午3点去医院），绝不能假装已经记下。</rule>")
         appendLine("      <rule>如果用户要求使用已在设置中关闭的功能（待办/日历/日记，见下方 module 状态 off），必须明确回复「该功能已关闭，请到设置中开启」，不要执行、不要假装已执行。</rule>")
@@ -752,6 +753,36 @@ object AiPrompter {
      * 日记自动回复：AI 针对用户刚写完的日记生成回复（共情 / 建议 / 鼓励）
      * 固定模板放最前，日记内容放最后（缓存友好）
      */
+    /**
+     * 日记 / AI 笔记改写：按用户要求重写正文（只输出正文，不输出标题与解释）
+     */
+    fun buildDiaryRewritePrompt(
+        personality: Personality,
+        diaryTitle: String?,
+        diaryContent: String,
+        requirement: String
+    ): String = buildString {
+        appendLine("你是「Magic note」的写作助手，文风：" + personality.label + "。")
+        appendLine("用户有一篇已经写好的内容，想请你按新要求改写。")
+        appendLine()
+        if (!diaryTitle.isNullOrBlank()) {
+            appendLine("原标题：" + diaryTitle.trim())
+        }
+        appendLine("原正文（Markdown）：")
+        appendLine("<original>")
+        appendLine(diaryContent.trim())
+        appendLine("</original>")
+        appendLine()
+        appendLine("用户的修改要求：")
+        appendLine(requirement.ifBlank { "让它更通顺、更有条理" })
+        appendLine()
+        appendLine("要求：")
+        appendLine("1. 严格遵守用户的修改要求，不要擅自删掉关键信息（数据、待办、时间、人名）除非用户明确要求删；")
+        appendLine("2. 保留原有的 Markdown 结构（标题/列表）风格，除非用户要求调整；")
+        appendLine("3. 只输出改写后的正文，不要输出「好的」「以下是」等客套话，不要用代码块包裹；")
+        appendLine("4. 不要输出标题行（# 开头），标题由用户自己保留。")
+    }
+
     fun buildDiaryReplyPrompt(
         personality: Personality,
         diaryTitle: String?,
