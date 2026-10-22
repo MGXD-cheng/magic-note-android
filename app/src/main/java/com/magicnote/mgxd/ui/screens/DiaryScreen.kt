@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -347,11 +348,18 @@ private fun formatDate(millis: Long, fmt: DateTimeFormatter): String =
 fun EditDiaryDialog(
     defaultDate: java.time.LocalDate,
     existing: DiaryEntity? = null,
+    /** 用于「AI 改写」；传 null 则不显示改写入口 */
+    vm: DiaryViewModel? = null,
     onDismiss: () -> Unit,
     onConfirm: (title: String?, content: String, mood: Int, imagePaths: List<String>) -> Unit
 ) {
     val editKey = existing?.id ?: -1L
     val context = androidx.compose.ui.platform.LocalContext.current
+    // ✨ AI 改写：保存后的 AI 笔记/日记也能继续提要求重写
+    var rewriteOpen by remember(editKey) { mutableStateOf(false) }
+    var rewriteReq by remember(editKey) { mutableStateOf("") }
+    var rewriting by remember(editKey) { mutableStateOf(false) }
+    var rewriteError by remember(editKey) { mutableStateOf<String?>(null) }
     var title by remember(editKey) { mutableStateOf(existing?.title ?: "") }
     var content by remember(editKey) { mutableStateOf(existing?.content ?: "") }
     var mood by remember(editKey) { mutableStateOf(existing?.mood ?: 2) }
@@ -392,6 +400,84 @@ fun EditDiaryDialog(
                     minLines = 4,
                     modifier = Modifier.fillMaxWidth()
                 )
+                // ✨ AI 改写入口（AI 笔记保存到日记后，也能继续提要求）
+                if (vm != null) {
+                    Column {
+                        Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                enabled = !rewriting,
+                                onClick = {
+                                    rewriteOpen = !rewriteOpen
+                                    rewriteError = null
+                                }
+                            ) { Text("✨ AI 改写") }
+                            if (rewriting) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .height(16.dp)
+                                        .width(16.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Text(
+                                    "AI 正在改写…",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                        if (rewriteOpen) {
+                            Spacer(Modifier.height(6.dp))
+                            OutlinedTextField(
+                                value = rewriteReq,
+                                onValueChange = { rewriteReq = it },
+                                label = { Text("想怎么改？") },
+                                placeholder = { Text("例：更简洁 / 分段列点 / 语气活泼些 / 只保留待办") },
+                                minLines = 2,
+                                enabled = !rewriting,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Button(
+                                enabled = !rewriting && content.isNotBlank(),
+                                onClick = {
+                                    rewriteError = null
+                                    rewriting = true
+                                    vm.rewriteDiary(
+                                        title = title.trim().ifBlank { null },
+                                        content = content,
+                                        requirement = rewriteReq
+                                    ) { newText, err ->
+                                        rewriting = false
+                                        if (newText != null) {
+                                            content = newText
+                                            rewriteOpen = false
+                                            rewriteReq = ""
+                                        }
+                                        rewriteError = err
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text(if (rewriteReq.isBlank()) "让 AI 改写" else "按这个要求改写") }
+                            rewriteError?.let {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "⚠️ " + it,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "改写结果会替换上面的正文（不想要的可以再提一次要求），满意后点「保存」",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+                    }
+                }
                 Column {
                     Text("今天的心情", style = MaterialTheme.typography.labelMedium)
                     Spacer(Modifier.height(4.dp))
