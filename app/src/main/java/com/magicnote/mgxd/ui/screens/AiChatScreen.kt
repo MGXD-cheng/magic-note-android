@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -549,6 +550,14 @@ private fun ChatBubble(
     selectable: Boolean = false,
     selected: Boolean = false
 ) {
+    val context = LocalContext.current
+    // 复制整条消息（Markdown 原文，便于粘贴到别处）
+    val copyText: () -> Unit = {
+        val cm = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                as? android.content.ClipboardManager
+        cm?.setPrimaryClip(android.content.ClipData.newPlainText("Magic AI", text))
+        Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+    }
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
@@ -601,14 +610,31 @@ private fun ChatBubble(
                 Checkbox(checked = selected, onCheckedChange = null)
             }
         }
-        // 历史时间标注（今天只显示时分，跨天显示日期）
+        // 历史时间标注（今天只显示时分，跨天显示日期）；AI 消息额外给「复制」
         if (!showTyping && timeMillis > 0L) {
-            Text(
-                text = formatChatTime(timeMillis),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = formatChatTime(timeMillis),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+                if (!isUser) {
+                    Text(
+                        text = "·",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                    Text(
+                        text = "复制",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .clickable(onClick = copyText)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
     }
 }
