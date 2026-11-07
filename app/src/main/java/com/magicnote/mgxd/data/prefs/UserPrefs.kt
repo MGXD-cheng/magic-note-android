@@ -52,6 +52,7 @@ class UserPrefs(private val context: Context) {
         private val KEY_DIARY_AUTO_REPLY = booleanPreferencesKey("diary_auto_reply")
         private val KEY_MODEL_VISION = booleanPreferencesKey("model_vision")
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
+        private val KEY_THEME_ACCENT = stringPreferencesKey("theme_accent")
         // ---- Magic AI 输出自动渲染 Markdown ----
         private val KEY_MARKDOWN_RENDER = booleanPreferencesKey("markdown_render")
 
@@ -219,6 +220,15 @@ class UserPrefs(private val context: Context) {
     }
     suspend fun saveThemeMode(mode: String) {
         context.dataStore.edit { p -> p[KEY_THEME_MODE] = mode }
+    }
+
+    /** 主题色：brand/blue/green/teal/orange/pink/dynamic */
+    val accentTheme: Flow<String> = context.dataStore.data.map { p ->
+        p[KEY_THEME_ACCENT] ?: "dynamic"
+    }
+
+    suspend fun saveAccentTheme(id: String) {
+        context.dataStore.edit { p -> p[KEY_THEME_ACCENT] = id }
     }
     // ---------- 功能模块开关 ----------
     val moduleConfig: Flow<ModuleConfig> = context.dataStore.data.map { p ->
