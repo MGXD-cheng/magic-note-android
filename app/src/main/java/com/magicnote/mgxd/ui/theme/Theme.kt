@@ -39,18 +39,22 @@ fun MGTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
+    /** 主题色：DYNAMIC = 跟随系统取色；其余按 M3 tonal palette 覆盖主色 */
+    accent: AccentTheme = AccentTheme.DYNAMIC,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     // 缓存色板：dynamicColorScheme 每次调用都要读几十个系统资源，每次重组都重建会让
     // 「切主题」这一帧明显变慢（顶部栏最先被看到，就像顶部延迟刷新）。
-    val colorScheme = remember(darkTheme, dynamicColor, context) {
-        when {
-            dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+    val colorScheme = remember(darkTheme, dynamicColor, accent, context) {
+        val base = when {
+            accent == AccentTheme.DYNAMIC && dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             darkTheme -> DarkColorScheme
             else -> LightColorScheme
         }
+        // 选中具体主题色时，用该色系的 M3 角色色覆盖（背景/表面保持统一中性色）
+        accent.apply(base, darkTheme)
     }
     MaterialTheme(
         colorScheme = colorScheme,
