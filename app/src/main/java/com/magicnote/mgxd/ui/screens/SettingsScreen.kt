@@ -2,6 +2,7 @@ package com.magicnote.mgxd.ui.screens
 
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import com.magicnote.mgxd.util.DndHelper
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.Lifecycle
@@ -23,6 +24,7 @@ import android.content.Context
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import com.magicnote.mgxd.ui.components.MarkdownText
+import com.magicnote.mgxd.ui.theme.AccentTheme
 import com.magicnote.mgxd.ui.viewmodel.ConflictPolicy
 import android.app.AlarmManager
 import android.content.Intent
@@ -33,6 +35,7 @@ import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +52,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -85,6 +89,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.magicnote.mgxd.ai.Personality
@@ -177,6 +182,60 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                     }
                     Text(
                         "深色模式夜间更护眼；「跟随系统」会随手机系统自动切换",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+
+                    // ===== 主题色（M3 tonal palette，深浅双适配）=====
+                    val accentNow by vm.accentTheme.collectAsStateWithLifecycle()
+                    Text(
+                        "主题色 · " + AccentTheme.fromId(accentNow).label,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        AccentTheme.entries.forEach { a ->
+                            val selected = accentNow == a.id
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (a == AccentTheme.DYNAMIC) MaterialTheme.colorScheme.surfaceVariant
+                                        else a.swatch()
+                                    )
+                                    .border(
+                                        width = if (selected) 2.dp else 1.dp,
+                                        color = if (selected) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outlineVariant,
+                                        shape = CircleShape
+                                    )
+                                    .clickable { vm.setAccentTheme(a.id) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (a == AccentTheme.DYNAMIC) {
+                                    Text(
+                                        "自动",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                } else if (selected) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = a.primary(dark = false),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Text(
+                        "柔和的浅色调；深色模式会自动换成同色系的浅色主色（Material 3 tonal palette）",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline
                     )
