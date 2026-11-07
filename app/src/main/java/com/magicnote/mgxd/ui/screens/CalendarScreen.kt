@@ -95,7 +95,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** 倒数日标记色：红色 */
-private val COUNTDOWN_RED = Color(0xFFE53935)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -458,7 +457,7 @@ private fun DayCell(
                 }
                 // 倒数日标记（红色圆点）
                 if (hasCountdown) {
-                    Box(modifier = Modifier.size(5.dp).background(COUNTDOWN_RED, CircleShape))
+                    Box(modifier = Modifier.size(5.dp).background(MaterialTheme.colorScheme.error, CircleShape))
                 }
             }
         }
@@ -470,14 +469,14 @@ private fun DayCell(
 private fun CountdownDayCard(countdown: CountdownEntity) {
     val days = countdown.daysLeft
     val (label, color) = when {
-        days > 0 -> "还有 $days 天" to COUNTDOWN_RED
-        days == 0L -> "就是今天！🎉" to COUNTDOWN_RED
+        days > 0 -> "还有 $days 天" to MaterialTheme.colorScheme.error
+        days == 0L -> "就是今天！🎉" to MaterialTheme.colorScheme.error
         else -> "已过 ${-days} 天" to MaterialTheme.colorScheme.outline
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = COUNTDOWN_RED.copy(alpha = 0.08f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.08f))
     ) {
         Row(
             modifier = Modifier
@@ -489,14 +488,14 @@ private fun CountdownDayCard(countdown: CountdownEntity) {
                 modifier = Modifier
                     .width(4.dp)
                     .height(40.dp)
-                    .background(COUNTDOWN_RED, RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.error, RoundedCornerShape(2.dp))
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "⏳ ${countdown.title}",
                     style = MaterialTheme.typography.titleMedium,
-                    color = COUNTDOWN_RED
+                    color = MaterialTheme.colorScheme.error
                 )
                 Text(
                     label,
@@ -995,9 +994,9 @@ private fun FocusModeScreen(
 
     // 状态：距开始 / 进行中 / 已结束
     val (statusText, statusColor) = when {
-        now < start -> "距开始 ${formatCountdown(start - now)}" to Color(0xFF4FC3F7)
-        now in start until end -> "进行中 · 剩余 ${formatCountdown(end - now)}" to Color(0xFF66BB6A)
-        else -> "已结束" to Color(0xFFB0BEC5)
+        now < start -> "距开始 ${formatCountdown(start - now)}" to MaterialTheme.colorScheme.tertiary
+        now in start until end -> "进行中 · 剩余 ${formatCountdown(end - now)}" to MaterialTheme.colorScheme.primary
+        else -> "已结束" to MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     val timeFmt = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -1011,7 +1010,7 @@ private fun FocusModeScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0D0D12)),
+                .background(MaterialTheme.colorScheme.scrim),
             contentAlignment = Alignment.Center
         ) {
             // 中央：大字时钟 + 日程信息
