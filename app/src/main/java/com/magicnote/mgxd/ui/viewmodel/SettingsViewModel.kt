@@ -9,6 +9,7 @@ import java.net.HttpURLConnection
 import com.magicnote.mgxd.update.UpdateInfo
 import com.magicnote.mgxd.update.UpdateChecker
 import com.magicnote.mgxd.lan.LanSyncServer
+import com.magicnote.mgxd.ui.theme.ThemeAccentBus
 import com.magicnote.mgxd.ui.theme.ThemeModeBus
 import com.magicnote.mgxd.util.DiaryLock
 import com.magicnote.mgxd.data.prefs.UserPrefs
@@ -66,6 +67,8 @@ class SettingsViewModel(private val repo: AppRepository) : ViewModel() {
 
     private val _themeMode = MutableStateFlow("system")
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+    private val _accentTheme = MutableStateFlow("dynamic")
+    val accentTheme: StateFlow<String> = _accentTheme.asStateFlow()
 
     // ---------- 日记锁 ----------
     private val _diaryLockEnabled = MutableStateFlow(false)
@@ -124,6 +127,7 @@ class SettingsViewModel(private val repo: AppRepository) : ViewModel() {
         viewModelScope.launch { repo.modelVision.collect { _modelVision.value = it } }
         viewModelScope.launch { repo.markdownRender.collect { _markdownRender.value = it } }
         viewModelScope.launch { repo.themeMode.collect { _themeMode.value = it } }
+        viewModelScope.launch { repo.accentTheme.collect { _accentTheme.value = it } }
     }
 
     /** 刷新今日屏幕时间统计（IO 查询，需使用情况访问权限） */
@@ -238,6 +242,12 @@ class SettingsViewModel(private val repo: AppRepository) : ViewModel() {
         // 先写进程内即时值：主题在下一帧就切好，不必等 DataStore 异步落盘
         ThemeModeBus.set(mode)
         viewModelScope.launch { repo.saveThemeMode(mode) }
+    }
+
+    /** 主题色：brand/blue/green/teal/orange/pink/dynamic */
+    fun setAccentTheme(id: String) {
+        ThemeAccentBus.set(id)
+        viewModelScope.launch { repo.saveAccentTheme(id) }
     }
 
     /** 按当前 Base URL 拉取该站点可用模型列表（结果通过 modelList 弹窗选择） */
