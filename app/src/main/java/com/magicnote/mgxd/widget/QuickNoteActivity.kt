@@ -62,12 +62,14 @@ class QuickNoteActivity : ComponentActivity() {
         setContent {
             val repo = (applicationContext as com.magicnote.mgxd.MGApp).container.repository
             val themeMode by repo.themeMode.collectAsState(initial = "system")
+            val accentId by repo.accentTheme.collectAsState(initial = "dynamic")
             MGTheme(
                 darkTheme = when (themeMode) {
                     "dark" -> true
                     "light" -> false
                     else -> isSystemInDarkTheme()
-                }
+                },
+                accent = com.magicnote.mgxd.ui.theme.AccentTheme.fromId(accentId)
             ) {
                 Surface(color = Color.Transparent) {
                     QuickNoteDialog(
