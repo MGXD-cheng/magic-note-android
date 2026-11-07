@@ -123,6 +123,15 @@ You may obtain a copy of the License at
 
 > 最新在上。每条列出该版本的主要改动。
 
+### v8.4
+- **AI 回复不再把时间戳当成内容**：撤回 v8.1 给历史消息加的 `[MM-dd HH:mm]` 前缀（模型会把前缀当内容复述出来）。时间信息改由 system prompt 的 `<date>` 提供，并要求「不要在回复里输出时间戳」；问「刚才/今天/昨天」仍然准确
+- **新增「主题色」选择（严格按 Material 3 tonal palette）**：外观卡片里新增一排浅色色块 —— 靛紫 / 海蓝 / 森绿 / 青碧 / 蜜橙 / 樱粉 / 系统取色。每个色系都定义 tone 10/20/30/40/80/90：
+  - 浅色模式：primary = tone40，primaryContainer = tone90，onPrimaryContainer = tone10
+  - 深色模式：primary = tone80，primaryContainer = tone30，onPrimaryContainer = tone90
+  - secondary / tertiary 由 primary 按色相旋转派生，整体协调不突兀
+  - 色块本身用 tone90 浅色，柔和不刺眼；切换即时生效（进程内即时值 + DataStore 持久化），快捷记录弹窗也跟着换色
+- 背景 / 表面色沿用统一中性色，保证任意主题色在深色模式下都有足够对比度
+
 ### v8.3
 - **Magic AI 回复支持一键复制**：每条 AI 消息的时间行旁多了「复制」（长按气泡仍是进入多选），点一下就把整条回复（Markdown 原文）复制到剪贴板，弹出「已复制」提示
 - **「专注与免打扰」卡片精简**：去掉大段说明，只保留两行授权 —— 「通知访问权限（专注模式自动开启勿扰）」和「闹钟和提醒（待办/日程/打卡准点提醒）」，左侧状态灯 + 右侧「去授权 / 已开启」，整行可点跳转系统设置，返回自动刷新
