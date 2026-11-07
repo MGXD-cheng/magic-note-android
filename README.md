@@ -131,7 +131,7 @@ You may obtain a copy of the License at
   - 深色模式：primary = tone80，primaryContainer = tone30，onPrimaryContainer = tone90
   - secondary / tertiary 由 primary 按色相旋转派生，整体协调不突兀
   - 色块本身用 tone90 浅色，柔和不刺眼；切换即时生效（进程内即时值 + DataStore 持久化），快捷记录弹窗也跟着换色
-- 背景 / 表面色沿用统一中性色，保证任意主题色在深色模式下都有足够对比度
+- 背景 / 表面色同样按主题色的 neutral palette 派生（见上方 UI 全量 M3 条目），深色模式下对比度仍有保证
 
 ### v8.3
 - **Magic AI 回复支持一键复制**：每条 AI 消息的时间行旁多了「复制」（长按气泡仍是进入多选），点一下就把整条回复（Markdown 原文）复制到剪贴板，弹出「已复制」提示
