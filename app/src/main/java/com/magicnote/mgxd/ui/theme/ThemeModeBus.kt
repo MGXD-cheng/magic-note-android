@@ -17,3 +17,12 @@ object ThemeModeBus {
         value.value = mode
     }
 }
+
+/** 主题色的进程内即时值（同 ThemeModeBus，点下即换色） */
+object ThemeAccentBus {
+    val value = MutableStateFlow<String?>(null)
+
+    fun set(id: String) {
+        value.value = id
+    }
+}
