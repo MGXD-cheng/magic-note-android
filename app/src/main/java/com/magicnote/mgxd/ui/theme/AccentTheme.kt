@@ -46,18 +46,82 @@ enum class AccentTheme(
     /** 设置页色块：一律用 tone90 的浅色，柔和不刺眼（深浅模式都能看清） */
     fun swatch(): Color = Color(t90)
 
-    /** 把选中色系套到基础色板上（DYNAMIC 原样返回） */
+    /** 把选中色系套到基础色板上（DYNAMIC 原样返回）
+     *
+     * 除了 primary 角色色，还按 M3 的 neutral palette 生成整套 surface / background /
+     * outline（neutral 是同一色相、极低饱和的一组色），所以背景、卡片、底部导航栏
+     * 都会带上与所选主题色一致的色调，而不是固定的紫灰。
+     */
     fun apply(base: ColorScheme, dark: Boolean): ColorScheme {
         if (this == DYNAMIC) return base
         val p = primary(dark)
+        val h = hueOf(p)
+        val secHue = hueOf(tint(p, 14f, 0.45f))
+        val terHue = hueOf(tint(p, 60f, 0.60f))
+
+        // M3 的 neutral 系列：保持色相、饱和度极低
+        fun neutral(tone: Int, sat: Float = 0.07f) = hsv(h, sat, tone)
+
+        val onSurface = if (dark) neutral(90, 0.10f) else neutral(10, 0.10f)
+        val onSurfaceVar = if (dark) neutral(80, 0.10f) else neutral(30, 0.12f)
+
         return base.copy(
+            // --- primary ---
             primary = p,
             onPrimary = onPrimary(dark),
             primaryContainer = primaryContainer(dark),
             onPrimaryContainer = onPrimaryContainer(dark),
-            secondary = tint(p, 14f, 0.45f),
-            tertiary = tint(p, 60f, 0.55f)
+            // --- secondary / tertiary（同色系派生，M3 的辅助色关系）---
+            secondary = if (dark) hsv(secHue, 0.32f, 80) else hsv(secHue, 0.42f, 40),
+            onSecondary = if (dark) hsv(secHue, 0.28f, 20) else Color(0xFFFFFFFF),
+            secondaryContainer = if (dark) hsv(secHue, 0.24f, 30) else hsv(secHue, 0.16f, 90),
+            onSecondaryContainer = if (dark) hsv(secHue, 0.30f, 90) else hsv(secHue, 0.40f, 10),
+            tertiary = if (dark) hsv(terHue, 0.34f, 80) else hsv(terHue, 0.44f, 40),
+            onTertiary = if (dark) hsv(terHue, 0.28f, 20) else Color(0xFFFFFFFF),
+            tertiaryContainer = if (dark) hsv(terHue, 0.24f, 30) else hsv(terHue, 0.16f, 90),
+            onTertiaryContainer = if (dark) hsv(terHue, 0.30f, 90) else hsv(terHue, 0.40f, 10),
+            // --- 背景 / 表面（M3 surface 层级）---
+            background = if (dark) neutral(6) else neutral(99),
+            onBackground = onSurface,
+            surface = if (dark) neutral(6) else neutral(99),
+            onSurface = onSurface,
+            surfaceVariant = if (dark) neutral(30, 0.10f) else neutral(90, 0.10f),
+            onSurfaceVariant = onSurfaceVar,
+            surfaceTint = p,
+            surfaceBright = if (dark) neutral(24) else neutral(98),
+            surfaceDim = if (dark) neutral(6) else neutral(87),
+            surfaceContainerLowest = if (dark) neutral(4) else neutral(100),
+            surfaceContainerLow = if (dark) neutral(10) else neutral(96),
+            surfaceContainer = if (dark) neutral(12) else neutral(94),
+            surfaceContainerHigh = if (dark) neutral(17) else neutral(92),
+            surfaceContainerHighest = if (dark) neutral(22) else neutral(90),
+            // --- 描边 ---
+            outline = if (dark) neutral(60, 0.09f) else neutral(50, 0.09f),
+            outlineVariant = if (dark) neutral(30, 0.09f) else neutral(80, 0.09f),
+            // --- 反色（对照 M3 inverse 角色）---
+            inverseSurface = if (dark) neutral(90) else neutral(20),
+            inverseOnSurface = if (dark) neutral(20) else neutral(95),
+            inversePrimary = if (dark) primary(false) else primary(true),
+            scrim = Color(0xFF000000),
+            // --- 错误色（M3 固定基线）---
+            error = if (dark) Color(0xFFF2B8B5) else Color(0xFFB3261E),
+            onError = if (dark) Color(0xFF601410) else Color(0xFFFFFFFF),
+            errorContainer = if (dark) Color(0xFF8C1D18) else Color(0xFFF9DEDC),
+            onErrorContainer = if (dark) Color(0xFFF9DEDC) else Color(0xFF410E0B)
         )
+    }
+
+    /** 取 HSV 色相 */
+    private fun hueOf(color: Color): Float {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+        return hsv[0]
+    }
+
+    /** M3 tone → 近似颜色（HSV 的 V 取 tone/100） */
+    private fun hsv(hue: Float, sat: Float, tone: Int): Color {
+        val v = (tone.coerceIn(0, 100) / 100f).coerceIn(0f, 1f)
+        return Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat.coerceIn(0f, 1f), v)))
     }
 
     /** 按色相旋转 + 降饱和派生辅助色（模拟 M3 的 secondary/tertiary 关系） */
