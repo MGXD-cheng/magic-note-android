@@ -94,6 +94,7 @@ suspend fun deleteChats(ids: List<Long>) = db.chatDao().deleteByIds(ids)
     val diaryLockSalt get() = prefs.diaryLockSalt
     val moduleConfig get() = prefs.moduleConfig
     val themeMode get() = prefs.themeMode
+    val accentTheme get() = prefs.accentTheme
     suspend fun saveAiConfig(
         baseUrl: String, apiKey: String, model: String,
         personalityId: String, customPrompt: String
@@ -111,6 +112,7 @@ suspend fun deleteChats(ids: List<Long>) = db.chatDao().deleteByIds(ids)
     suspend fun saveDiaryLock(enabled: Boolean, mode: String, hash: String? = null, salt: String? = null) =
         prefs.saveDiaryLock(enabled, mode, hash, salt)
     suspend fun saveThemeMode(mode: String) = prefs.saveThemeMode(mode)
+    suspend fun saveAccentTheme(id: String) = prefs.saveAccentTheme(id)
 
     suspend fun saveModuleConfig(todoEnabled: Boolean, calendarEnabled: Boolean, diaryEnabled: Boolean) =
         prefs.saveModuleConfig(todoEnabled, calendarEnabled, diaryEnabled)
