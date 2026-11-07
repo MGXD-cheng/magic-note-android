@@ -29,6 +29,9 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -187,12 +190,24 @@ fun AppNav(initialTab: Int? = null) {
                 )
             }
         }
-        NavigationBar {
+        // 严格按 M3：containerColor = surfaceContainer（随主题色派生），
+        // 选中指示器 = secondaryContainer，未选中图标 = onSurfaceVariant
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            tonalElevation = 3.dp
+        ) {
             visibleTabs.forEachIndexed { _, tab ->
                 val index = tabs.indexOf(tab)
                 NavigationBarItem(
                     selected = currentTab == index,
                     onClick = { currentTab = index },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                        indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
                     icon = {
                         Icon(
                             imageVector = if (currentTab == index) tab.selectedIcon else tab.unselectedIcon,
