@@ -70,6 +70,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -89,6 +96,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -155,35 +163,38 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            // M3：分组卡片之间 12dp（比旧版 16dp 更紧凑，符合 M3 列表节奏）
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ===== 外观 =====
             SectionCard(title = "外观", icon = Icons.Default.DarkMode) {
                 val themeMode by vm.themeMode.collectAsStateWithLifecycle()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("主题模式", style = MaterialTheme.typography.titleMedium)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val options = listOf(
-                            "system" to "跟随系统",
-                            "light" to "浅色",
-                            "dark" to "深色"
-                        )
-                        options.forEach { (mode, label) ->
-                            OutlinedButton(
+                    // M3 标准：单选分段按钮（SingleChoiceSegmentedButtonRow）
+                    val themeOptions = listOf(
+                        "system" to "跟随系统",
+                        "light" to "浅色",
+                        "dark" to "深色"
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        themeOptions.forEachIndexed { i, (mode, label) ->
+                            SegmentedButton(
+                                selected = themeMode == mode,
                                 onClick = { vm.setThemeMode(mode) },
-                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (themeMode == mode) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surface
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = i,
+                                    count = themeOptions.size
                                 ),
-                                modifier = Modifier.weight(1f)
-                            ) { Text(label) }
+                                label = { Text(label) }
+                            )
                         }
                     }
                     Text(
                         "深色模式夜间更护眼；「跟随系统」会随手机系统自动切换",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     // ===== 主题色（M3 tonal palette，深浅双适配）=====
@@ -237,7 +248,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                     Text(
                         "柔和的浅色调；深色模式会自动换成同色系的浅色主色（Material 3 tonal palette）",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -305,7 +316,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "点击后按当前 Base URL 自动拉取该站点支持的模型名，选中即自动填入上方",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val modelOptions by vm.modelList.collectAsStateWithLifecycle()
                 val modelListError by vm.modelListError.collectAsStateWithLifecycle()
@@ -354,7 +365,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         Text(
                             "开启后：AI 回复日记时会把日记附带的图片一起注入识别（需模型支持视觉，如 gpt-4o / qwen-vl）",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(
@@ -375,7 +386,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         Text(
                             "开启后：Magic AI 回复里的 **粗体**、# 标题、- 列表、`代码` 等 Markdown 语法会自动排版显示（关闭则按原始文本显示）",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(Modifier.width(8.dp))
@@ -387,7 +398,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "支持 OpenAI 及所有兼容接口（DeepSeek / Kimi / 通义 / 本地 Ollama 等）",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedButton(
                     onClick = {
@@ -416,7 +427,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         )
                         Column {
                             Text("${p.emoji} ${p.label}", style = MaterialTheme.typography.titleMedium)
-                            Text(p.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            Text(p.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -442,7 +453,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 ) {
                     Column {
                         Text("启用通知", style = MaterialTheme.typography.titleMedium)
-                        Text("待办提醒 + 每日汇总", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("待办提醒 + 每日汇总", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = notifEnabled,
@@ -459,7 +470,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 ) {
                     Column {
                         Text("每日进度汇总", style = MaterialTheme.typography.titleMedium)
-                        Text("定时统计完成进度并催促", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("定时统计完成进度并催促", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = summaryEnabled,
@@ -491,7 +502,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "每天到点会收到一条通知，按你选的性格口吻汇报进度并催促完成",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 // 系统权限引导：通知权限（Android 13+）与精确闹钟权限（Android 12+）不足时提示，避免收不到每日汇总
                 val notifManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -538,7 +549,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "关闭模块不会删除已有数据，只是从界面隐藏；重新开启即可恢复",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -552,7 +563,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 ) {
                     Column {
                         Text("日记自动回复", style = MaterialTheme.typography.titleMedium)
-                        Text("每次写完日记，Magic AI 自动回复（共情/建议/鼓励）", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("每次写完日记，Magic AI 自动回复（共情/建议/鼓励）", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = diaryAutoReply,
@@ -562,7 +573,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "开启后：保存日记时 AI 会读一遍内容，以当前人格口吻回复，回复存入 Magic AI 聊天记录并推送通知。需要先在「Magic AI 接口配置」填好 API Key",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -599,7 +610,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "开启后，进入日记页需要验证（数字密码或指纹 / 人脸 / 设备锁），保护私密记录",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -611,7 +622,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         Text(
                             if (lockEnabled) "已开启" else "未开启",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(
@@ -672,7 +683,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "密码仅保存在本机（随机盐 + SHA-256，不存明文）；忘记密码可在日记锁屏用设备锁验证解锁",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (showPwdDialog) {
@@ -800,7 +811,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 ) {
                     Column {
                         Text("纯净模式", style = MaterialTheme.typography.titleMedium)
-                        Text("关闭后台保活与所有提醒", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("关闭后台保活与所有提醒", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = pureMode,
@@ -810,7 +821,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "开启后：停止后台守护服务，关闭屏幕监控、待办提醒、每日汇总、每日报告、每日清理等所有后台功能，应用完全静默、不占资源。需要提醒时再关掉此开关即可全部恢复。",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -879,7 +890,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "从 GitHub 检查最新版本；发现新版本可直接下载并安装（首次需在系统里允许「安装未知应用」）",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 val updateChecking by vm.updateChecking.collectAsStateWithLifecycle()
                 val updateInfo by vm.updateInfo.collectAsStateWithLifecycle()
@@ -975,7 +986,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                     Text(
                         "需要开启「使用情况访问权限」才能统计手机和应用使用时长（系统特殊权限，仅本机统计，不上传）",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     OutlinedButton(
                         onClick = {
@@ -999,7 +1010,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                     ) {
                         Column {
                             Text("今日手机使用时长", style = MaterialTheme.typography.titleMedium)
-                            Text("屏幕时间统计（仅本机）", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                            Text("屏幕时间统计（仅本机）", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
                             formatDuration(stats?.todayUsageMillis),
@@ -1013,7 +1024,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         Text(
                             "暂无使用数据，过一会儿再来看看吧",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         apps.forEach { app ->
@@ -1032,7 +1043,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                                 Text(
                                     formatDuration(app.millis),
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -1049,7 +1060,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                         Text(
                             "连续使用娱乐应用超过阈值自动提醒（可 AI 生成文案）",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(
@@ -1082,7 +1093,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
                 Text(
                     "内置自动分类：娱乐 / 社交 / 购物 / 工具 / 学习 / 其他 · 每日 22:00 日报告 / 周日 08:00 周报告",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (showCategoryDialog) {
                     CategoryManageDialog(
@@ -1103,7 +1114,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
             Text(
                 "Magic note v$versionName",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.CenterHorizontally)
@@ -1113,7 +1124,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
             Text(
                 "Magic note v${com.magicnote.mgxd.BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.CenterHorizontally)
@@ -1121,7 +1132,7 @@ fun SettingsScreen(vm: SettingsViewModel, dataVm: DataTransferViewModel, onClose
             Text(
                 "Designed by MGXD(and DeepSeek)",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.CenterHorizontally)
@@ -1137,24 +1148,42 @@ private fun SectionCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text(title, style = MaterialTheme.typography.titleLarge)
+    // M3：分组卡片用 surfaceContainerLow，标题走 ListItem（leading 图标 + headline），
+    // 与内容之间用 HorizontalDivider 分隔，这是 Material 3 设置页的标准分组表达
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            ListItem(
+                headlineContent = {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                },
+                leadingContent = {
+                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = MaterialTheme.colorScheme.outlineVariant
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                content()
             }
-            content()
         }
     }
 }
 
-/** 功能模块开关行（标题 + 说明 + Switch） */
+/** 设置开关项（M3 list row：标题 + 支撑文案 + Switch，整行可点，最小高度 56dp） */
 @Composable
 private fun ModuleSwitchRow(
     title: String,
@@ -1163,14 +1192,23 @@ private fun ModuleSwitchRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(desc, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(
+                desc,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        Spacer(Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
@@ -1204,13 +1242,13 @@ private fun CategoryManageDialog(
                 Text(
                     "把应用包名归入指定类别（会覆盖内置规则），未设置的应用按内置规则自动分类。",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (overrides.isEmpty()) {
                     Text(
                         "还没有自定义分类，在下方添加吧",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     overrides.forEach { (pkg, cat) ->
@@ -1287,8 +1325,10 @@ private fun PermissionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clip(MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -1300,18 +1340,19 @@ private fun PermissionRow(
                     CircleShape
                 )
         )
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             Text(
                 desc,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Spacer(Modifier.width(8.dp))
         Text(
             text = if (granted) "已开启" else "去授权",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             color = if (granted) MaterialTheme.colorScheme.onSurfaceVariant
             else MaterialTheme.colorScheme.primary
         )
