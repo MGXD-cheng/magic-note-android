@@ -124,6 +124,7 @@ You may obtain a copy of the License at
 > 最新在上。每条列出该版本的主要改动。
 
 ### v8.4
+- **设置页 UI 按 M3 重写**：分组卡片改为 `Card`(surfaceContainerLow) + `ListItem` 标题 + `HorizontalDivider`；开关项/权限项改为 M3 规范 list row（56dp 最小高度、整行可点、supporting text 用 onSurfaceVariant）；主题模式改为 `SingleChoiceSegmentedButtonRow` 分段按钮；全页说明文字由 `outline` 改为 M3 语义正确的 `onSurfaceVariant`；分组间距 16→12dp
 - **UI 全量 Material 3 重写**：完整 ColorScheme —— background / surface / surfaceContainer* / surfaceBright / surfaceDim / outline / outlineVariant / secondaryContainer 等全部由主题色按 M3 neutral + tonal palette 派生（背景、卡片、底部导航栏都跟着主题色走，不再是固定的紫灰）；NavigationBar 显式使用 M3 token（containerColor = surfaceContainer，indicator = secondaryContainer，未选中 = onSurfaceVariant）；日历页硬编码色替换为 error / tertiary / primary / onSurfaceVariant / scrim
 - **AI 回复不再把时间戳当成内容**：撤回 v8.1 给历史消息加的 `[MM-dd HH:mm]` 前缀（模型会把前缀当内容复述出来）。时间信息改由 system prompt 的 `<date>` 提供，并要求「不要在回复里输出时间戳」；问「刚才/今天/昨天」仍然准确
 - **新增「主题色」选择（严格按 Material 3 tonal palette）**：外观卡片里新增一排浅色色块 —— 靛紫 / 海蓝 / 森绿 / 青碧 / 蜜橙 / 樱粉 / 系统取色。每个色系都定义 tone 10/20/30/40/80/90：
