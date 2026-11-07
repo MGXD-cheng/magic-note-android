@@ -136,8 +136,9 @@ class AiViewModel(private val repo: AppRepository) : ViewModel() {
 
                 // 历史上下文（Room 流异步更新，这里手动拼上刚发的消息，确保 AI 看得到）
                 val history = (_messages.value + ChatItem("user", text)).takeLast(12).map {
-                    // 每条历史都带上发送时间：AI 才能正确理解「刚才/今天/昨天」，整理笔记时也能标注日期
-                    AiClient.ChatMessage(role = it.role, content = chatStamp(it.timestamp) + it.content)
+                    // 注意：不要把时间戳塞进消息内容（AI 会把它当成内容复述出来）。
+                    // 时间信息由 system prompt 里的 <date> 提供
+                    AiClient.ChatMessage(role = it.role, content = it.content)
                 }
                 val allMessages = listOf(
                     AiClient.ChatMessage("system", systemPrompt)
