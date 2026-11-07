@@ -33,7 +33,9 @@ import androidx.lifecycle.lifecycleScope
 import com.magicnote.mgxd.notify.NotificationHelper
 import com.magicnote.mgxd.notify.ReminderScheduler
 import com.magicnote.mgxd.ui.navigation.AppNav
+import com.magicnote.mgxd.ui.theme.AccentTheme
 import com.magicnote.mgxd.ui.theme.MGTheme
+import com.magicnote.mgxd.ui.theme.ThemeAccentBus
 import com.magicnote.mgxd.ui.theme.ThemeModeBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,12 +73,16 @@ class MainActivity : ComponentActivity() {
             // 进程内即时值优先：点下主题就切，不必等 DataStore 的异步回调
             val instantMode by ThemeModeBus.value.collectAsState()
             val themeMode = instantMode ?: storedMode
+            // 主题色：同样优先用进程内即时值
+            val storedAccent by repo.accentTheme.collectAsState(initial = "dynamic")
+            val instantAccent by ThemeAccentBus.value.collectAsState()
+            val accent = AccentTheme.fromId(instantAccent ?: storedAccent)
             val darkTheme = when (themeMode) {
                 "dark" -> true
                 "light" -> false
                 else -> isSystemInDarkTheme()
             }
-            MGTheme(darkTheme = darkTheme) {
+            MGTheme(darkTheme = darkTheme, accent = accent) {
                 // 主题切换时，系统栏图标 / 窗口底色必须和内容「同一帧」更新。
                 // 原来用 DisposableEffect（组合提交后才执行）→ 顶部状态栏会慢半拍，
                 // 这里改成 remember(key)：在组合阶段就同步到窗口，和主题颜色一起生效。
