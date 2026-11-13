@@ -49,6 +49,7 @@ import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -169,7 +170,13 @@ private fun DiaryGroupCard(
 ) {
     val dateFmt = DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE")
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
         Column(modifier = Modifier.padding(vertical = 6.dp)) {
             Row(
                 modifier = Modifier
@@ -182,7 +189,7 @@ private fun DiaryGroupCard(
                 Text(
                     "${diaries.size}篇",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             diaries.forEach { diary ->
@@ -217,7 +224,7 @@ private fun DiaryEntryRow(
         Text(
             formatDate(timeMillis, timeFmt),
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.outline,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(44.dp)
         )
         Text(mood, style = MaterialTheme.typography.titleMedium)
@@ -424,7 +431,7 @@ fun EditDiaryDialog(
                                 Text(
                                     "AI 正在改写…",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -473,7 +480,7 @@ fun EditDiaryDialog(
                             Text(
                                 "改写结果会替换上面的正文（不想要的可以再提一次要求），满意后点「保存」",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -614,7 +621,7 @@ private fun DiaryLockScreen(
             Text(
                 if (mode == "biometric") "使用指纹 / 人脸 / 设备密码解锁" else "输入数字密码解锁",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(20.dp))
 
