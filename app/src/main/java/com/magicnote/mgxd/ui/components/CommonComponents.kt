@@ -169,13 +169,13 @@ fun EmptyState(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(56.dp),
-            tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
         Spacer(Modifier.height(12.dp))
         Text(
             text = text,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
     }
@@ -200,7 +200,7 @@ fun MoodSelector(selected: Int, onSelect: (Int) -> Unit) {
                 color = if (isSelected) {
                     MaterialTheme.colorScheme.primaryContainer
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+                    MaterialTheme.colorScheme.surfaceContainerHighest
                 }
             ) {
                 androidx.compose.foundation.layout.Box(
@@ -256,7 +256,10 @@ fun ColorSelector(selected: Int, onSelect: (Int) -> Unit) {
                 onClick = { onSelect(index) },
                 modifier = Modifier.size(32.dp),
                 shape = CircleShape,
-                color = color
+                color = color,
+                border = if (index == selected)
+                    androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.onSurface)
+                else null
             ) {
                 if (index == selected) {
                     androidx.compose.foundation.layout.Box(
