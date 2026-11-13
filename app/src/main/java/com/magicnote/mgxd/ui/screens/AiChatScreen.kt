@@ -203,7 +203,7 @@ fun AiChatScreen(vm: AiViewModel) {
                         Text(
                             "我是你的 Magic AI 生活助手\n我了解你的待办、日程和日记\n有什么想聊的？",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
@@ -481,7 +481,7 @@ private fun NotePreviewDialog(
                     Text(
                         "素材：已选 ${draft.sourceIds.size} 条聊天",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 draft.error?.let {
@@ -512,7 +512,7 @@ private fun NotePreviewDialog(
                 Text(
                     "不满意可以提要求重新生成（沿用同一批聊天），满意后再点「保存到日记」",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         },
@@ -616,14 +616,14 @@ private fun ChatBubble(
                 Text(
                     text = formatChatTime(timeMillis),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
                 if (!isUser) {
                     Text(
                         text = "·",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = "复制",
@@ -672,7 +672,7 @@ private fun MessagePickerDialog(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 430.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
+                Text(hint, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("已选 ${selected.size}/${messages.size} 条", style = MaterialTheme.typography.bodySmall)
                     TextButton(onClick = { selected = messages.takeLast(20).map { it.id }.toSet() }) { Text("最近20条") }
@@ -702,7 +702,7 @@ private fun MessagePickerDialog(
                                 Text(
                                     (if (m.role == "user") "🧑 我" else "🤖 Magic AI") + " · " + formatChatTime(m.timestamp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     m.content.replace('\n', ' '),
@@ -758,7 +758,7 @@ private fun ChatExportDialog(
                     if (kind == "mgxd") "导出为 .mgxd 后，可在「设置 → 数据备份与迁移 → 导入备份」里把聊天记录导回来"
                     else "导出为 Markdown 文本，方便阅读与存档",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -787,7 +787,7 @@ private fun ChatExportDialog(
                                 Text(
                                     (if (m.role == "user") "🧑 我" else "🤖 Magic AI") + " · " + formatChatTime(m.timestamp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     m.content.replace('\n', ' '),
