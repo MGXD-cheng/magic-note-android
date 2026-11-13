@@ -510,7 +510,7 @@ private fun HabitCard(
                 Text(
                     "累计 ${habit.checkInDates.size} 天",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             if (habit.targetDays > 0) {
@@ -529,7 +529,7 @@ private fun HabitCard(
                     Text(
                         "目标 ${habit.targetDays} 天 · 还差 ${habit.targetDays - habit.checkInDates.size} 天",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -537,7 +537,7 @@ private fun HabitCard(
                 Text(
                     "⏰ 每天 ${String.format("%02d:%02d", habit.remindHour, habit.remindMinute)} 提醒",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Button(
@@ -550,7 +550,7 @@ private fun HabitCard(
             Text(
                 "点击卡片查看已打卡日期",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -600,7 +600,7 @@ private fun AddHabitDialog(
                 ) {
                     Column {
                         Text("每日提醒", style = MaterialTheme.typography.titleMedium)
-                        Text("到点推送通知提醒打卡", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.outline)
+                        Text("到点推送通知提醒打卡", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = remindEnabled,
@@ -694,7 +694,7 @@ private fun HabitHistoryDialog(
                     Text(
                         "还没有打卡记录，今天就开始吧 💪",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
                     Column(
@@ -888,7 +888,13 @@ fun AiQuickAddDialog(
 
                     parseState.result != null -> {
                         val r = parseState.result!! // 该 when 分支已判非空
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
                             Column(
                                 modifier = Modifier.padding(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -911,7 +917,7 @@ fun AiQuickAddDialog(
                                 Text(
                                     "确认无误即可一键创建；想改就重新输入再解析",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -1009,14 +1015,14 @@ fun TodoItemCard(
                     Text(
                         text = "由 magic ai 创建",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 todo.description?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Row(
@@ -1159,7 +1165,7 @@ fun AddTodoDialog(
                     Text(
                         "长期待办适合长期努力达成的目标，如「一年读完 12 本书」",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.outline
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
