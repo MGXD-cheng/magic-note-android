@@ -24,7 +24,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +51,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -152,16 +157,26 @@ fun DataBackupCard(dataVm: DataTransferViewModel, vm: SettingsViewModel) {
         }
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    // M3：分组卡片（surfaceContainerLow + shapes.large），标题行 + 分割线
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(12.dp))
                 Text("数据备份与迁移", style = MaterialTheme.typography.titleMedium)
             }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = {
@@ -182,16 +197,16 @@ fun DataBackupCard(dataVm: DataTransferViewModel, vm: SettingsViewModel) {
         Text(
             "导出为 .mgxd（含图片，自动压缩到 5MB 以内）或 CSV（仅文本）；导入自动合并，不覆盖已有数据",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         // ===== 局域网同步（同一 Wi-Fi 下两台设备互传 / 预览） =====
-        HorizontalDivider()
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Text("局域网同步（两台设备互传）", style = MaterialTheme.typography.titleMedium)
         Text(
             "两台设备连同一 Wi-Fi：A 开启服务后，B 用浏览器打开该地址即可：① 下载 Magic Note 安装包（APK）② 预览数据 ③ 下载 .mgxd 备份；也可在下方填入 A 的地址一键合并数据",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         // ===== 可选同步内容 =====
         Text(
@@ -235,7 +250,7 @@ fun DataBackupCard(dataVm: DataTransferViewModel, vm: SettingsViewModel) {
             }
         }
         if (lanUrl == null) {
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = {
                     vm.startLanSync(
                         exportProvider = { dataVm.buildMgxdText(true, lanTypes) },
@@ -253,7 +268,7 @@ fun DataBackupCard(dataVm: DataTransferViewModel, vm: SettingsViewModel) {
             Text(
                 "在电脑 / 另一台手机浏览器打开上面的地址：可预览数据概览，并可下载 .mgxd 备份文件",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 "当前同步内容：" + lanTypes.joinToString(" / ") { DataTransferViewModel.TYPE_LABELS[it] ?: it },
@@ -285,7 +300,7 @@ fun DataBackupCard(dataVm: DataTransferViewModel, vm: SettingsViewModel) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        OutlinedButton(
+        Button(
             onClick = { vm.downloadFromLan(lanAddr) },
             enabled = !lanDownloading,
             modifier = Modifier.fillMaxWidth()
@@ -574,7 +589,7 @@ private fun ExportPickerDialog(
                             TextButton(onClick = { checked = emptySet() }) { Text("取消全选") }
                         }
                     }
-                    HorizontalDivider()
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
                         items(candidates, key = { it.key }) { cand ->
                             Row(
@@ -589,7 +604,7 @@ private fun ExportPickerDialog(
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(cand.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
-                                    Text(cand.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1)
+                                    Text(cand.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                                 }
                             }
                         }
@@ -602,7 +617,7 @@ private fun ExportPickerDialog(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text("保留透明通道", style = MaterialTheme.typography.bodyMedium)
-                            Text("PNG 透明背景原样保留（将增大体积）；不勾选则自动补白", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            Text("PNG 透明背景原样保留（将增大体积）；不勾选则自动补白", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Checkbox(checked = preserveAlpha, onCheckedChange = { preserveAlpha = it })
                     }
