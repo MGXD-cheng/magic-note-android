@@ -149,7 +149,7 @@ fun HomeScreen(
                         Text(
                             today.format(DateTimeFormatter.ofPattern("M月d日 EEEE")),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.outline
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -171,7 +171,13 @@ fun HomeScreen(
             // 进度卡片（待办关闭时隐藏「今日任务进度」）
             if (moduleConfig.todoEnabled) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            )
+        ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -201,7 +207,7 @@ fun HomeScreen(
                                         else -> "已完成 $completedCount 项，还剩 ${totalCount - completedCount} 项待办"
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -326,7 +332,7 @@ fun HomeScreen(
                             Text(
                                 text = todayDiary?.content ?: "",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.outline,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -389,7 +395,7 @@ private fun CompactHabitRow(habit: HabitEntity, onCheckIn: () -> Unit) {
                 Text(
                     "✓ 已打卡",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Button(onClick = onCheckIn) { Text("打卡") }
@@ -444,7 +450,7 @@ private fun SectionHeader(title: String, count: Int, onAdd: () -> Unit) {
             Text(
                 "$count",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(Modifier.weight(1f))
@@ -459,7 +465,7 @@ private fun EmptyHint(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.outline,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(vertical = 8.dp)
     )
 }
@@ -594,12 +600,13 @@ private fun buildHomeTip(
 private fun AiTipCard(tip: String, onClick: () -> Unit) {
     // 用当前主题背景亮度判断深浅，而不是系统设置 —— 否则「系统亮色 + App 强制暗色」时会用错配色
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val container = if (dark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0E8FF)
-    val accent = if (dark) Color(0xFFB49BFF) else Color(0xFF5B3DF5)
+    val container = MaterialTheme.colorScheme.primaryContainer
+    val accent = MaterialTheme.colorScheme.onPrimaryContainer
 
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = container)
     ) {
         Row(
@@ -637,10 +644,11 @@ private fun AiTipCard(tip: String, onClick: () -> Unit) {
 private fun ScreenTimeCard(total: Long, categories: List<ScreenTimeManager.CategoryUsage>) {
     // 用当前主题背景亮度判断深浅，而不是系统设置 —— 否则「系统亮色 + App 强制暗色」时会用错配色
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val container = if (dark) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0E8FF)
+    val container = MaterialTheme.colorScheme.surfaceContainerLow
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = container)
     ) {
         Column(
@@ -664,7 +672,7 @@ private fun ScreenTimeCard(total: Long, categories: List<ScreenTimeManager.Categ
                 Text(
                     "今日暂无使用数据，用一会儿手机再来看看吧",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -693,7 +701,7 @@ private fun ScreenTimeCard(total: Long, categories: List<ScreenTimeManager.Categ
                                 Text(
                                     "${TimeUtils.formatDuration(c.millis)} $pct%",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.outline
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -703,7 +711,7 @@ private fun ScreenTimeCard(total: Long, categories: List<ScreenTimeManager.Categ
             Text(
                 "分类可在 设置 → 屏幕时间 自定义 · 每日 22:00 日报告 / 周日 08:00 周报告",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
