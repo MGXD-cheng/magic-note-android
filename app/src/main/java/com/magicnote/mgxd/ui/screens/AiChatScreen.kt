@@ -577,7 +577,7 @@ private fun ChatBubble(
                         color = if (isUser) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            MaterialTheme.colorScheme.surfaceContainerHighest
                         },
                         shape = RoundedCornerShape(
                             topStart = 16.dp,
