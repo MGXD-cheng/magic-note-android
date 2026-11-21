@@ -41,6 +41,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -128,7 +129,7 @@ fun TodoScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            TabRow(selectedTabIndex = tab) {
+            PrimaryTabRow(selectedTabIndex = tab) {
                 Tab(
                     selected = tab == 0,
                     onClick = { tab = 0 },
@@ -472,7 +473,11 @@ private fun HabitCard(
 ) {
     Card(
         onClick = onHistory,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
     ) {
         Column(
             modifier = Modifier
@@ -490,14 +495,14 @@ private fun HabitCard(
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = "编辑",
-                        tint = MaterialTheme.colorScheme.outline
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "删除",
-                        tint = MaterialTheme.colorScheme.outline
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -731,11 +736,16 @@ private fun CountdownCard(
     val (label, color) = when {
         days > 0 -> "还有 $days 天" to MaterialTheme.colorScheme.primary
         days == 0L -> "就是今天！🎉" to MaterialTheme.colorScheme.primary
-        else -> "已过 ${-days} 天" to MaterialTheme.colorScheme.outline
+        else -> "已过 ${-days} 天" to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Card(
         onClick = onEdit,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+
     ) {
         Row(
             modifier = Modifier
@@ -755,7 +765,7 @@ private fun CountdownCard(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.outline
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -964,13 +974,18 @@ fun TodoItemCard(
     val priorityColor = when {
         isOverdue -> MaterialTheme.colorScheme.error
         todo.priority == 2 -> MaterialTheme.colorScheme.error
-        todo.priority == 1 -> Color(0xFFFFB74D)
-        else -> MaterialTheme.colorScheme.outline
+        todo.priority == 1 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
     Card(
         onClick = onEdit,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+
     ) {
         Row(
             modifier = Modifier
@@ -992,7 +1007,7 @@ fun TodoItemCard(
                     style = MaterialTheme.typography.titleMedium,
                     textDecoration = if (todo.completed) TextDecoration.LineThrough else null,
                     color = when {
-                        todo.completed -> MaterialTheme.colorScheme.outline
+                        todo.completed -> MaterialTheme.colorScheme.onSurfaceVariant
                         isOverdue -> MaterialTheme.colorScheme.error
                         else -> MaterialTheme.colorScheme.onSurface
                     }
@@ -1067,7 +1082,7 @@ fun TodoItemCard(
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.outline
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
