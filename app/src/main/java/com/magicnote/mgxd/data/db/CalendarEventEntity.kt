@@ -18,5 +18,11 @@ data class CalendarEventEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val source: String = "",
     /** 提前提醒分钟数（0=不提醒，5/10/15/30/60/120/1440 等） */
-    val remindMinutes: Int = 0
+    val remindMinutes: Int = 0,
+    /** 循环规则：NONE / DAILY / WEEKLY / MONTHLY（循环日程只存一条，渲染时展开） */
+    val recurrence: String = "NONE",
+    /** WEEKLY 指定星期几（ISO：1=周一 … 7=周日；0=跟随起始日期） */
+    val recurrenceWeekday: Int = 0,
+    /** 循环截止时间（毫秒，0=永久） */
+    val recurrenceUntil: Long = 0L
 )
