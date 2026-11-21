@@ -123,6 +123,24 @@ You may obtain a copy of the License at
 
 > 最新在上。每条列出该版本的主要改动。
 
+### v8.5
+
+- **循环日程**：新建/编辑日程可设「不重复 / 每天 / 每周（指定周几，如每周六）/ 每月」
+  - 数据层只存一条规则记录（`recurrence` / `recurrenceWeekday` / `recurrenceUntil`），渲染时按窗口展开成实例
+  - 日历月视图圆点、选中日列表、首页「今日日程」全部用展开后的实例（`RecurrenceHelper.Occurrence`）
+  - 卡片上显示 `↻ 每周六` 徽标；删除时提示「会移除整组所有重复日程」
+  - 数据库 v8 → v9 迁移（`ALTER TABLE events ADD COLUMN` ×3，默认 NONE/0/0，旧数据零影响）
+- **拍照导入日程**：日历页「新建日程」旁边的相机按钮 → 拍照 → 视觉模型识别 → 预览勾选 → 批量导入
+  - 用系统相机 Intent（不需要 CAMERA 权限），临时文件走已有的 FileProvider
+  - 提示词要求输出 JSON 数组（title/date/start/end/recurrence/weekday），识别到「每周六」会自动带循环规则
+  - 复用 `AiClient` 已有的 OpenAI vision 多模态支持（`ChatMessage.images`）
+- **卡片全部 M3 化（今日 / 待办 / Magic AI）**
+  - 待办页：`HabitCard` / `CountdownCard` / `TodoItemCard` → `surfaceContainerLow` + `shapes.large`
+  - 首页：`CompactEventRow` / `CompactHabitRow` / `CompactCountdownRow` → `shapes.medium` + `surfaceContainerLow`，行高 52dp
+  - Magic AI：助手气泡 `surfaceVariant` → `surfaceContainerHighest`（M3 语义层级）
+  - 待办页 `TabRow` → `PrimaryTabRow`（M3 标准）
+  - 优先级/已完成/图标 tint 的 `outline` 全部换成 `onSurfaceVariant`，中优先级色改 `tertiary`
+
 ### v8.4
 - **其余页面同步 M3 化**：首页 AI 提示卡改用 `primaryContainer`/`onPrimaryContainer`（去掉硬编码浅紫），屏幕时间图表卡改用 `surfaceContainerLow`；数据备份卡改为分组卡 + 标题行 + 分割线，「开启局域网同步」升为 `FilledTonalButton`、「下载并导入」升为 `Button`；空状态 / 心情选择 / 日程颜色选择器改用 M3 层级色与选中描边；全局说明文字语义色修正 44 处（outline → onSurfaceVariant）
 - **设置页 UI 按 M3 重写**：分组卡片改为 `Card`(surfaceContainerLow) + `ListItem` 标题 + `HorizontalDivider`；开关项/权限项改为 M3 规范 list row（56dp 最小高度、整行可点、supporting text 用 onSurfaceVariant）；主题模式改为 `SingleChoiceSegmentedButtonRow` 分段按钮；全页说明文字由 `outline` 改为 M3 语义正确的 `onSurfaceVariant`；分组间距 16→12dp
