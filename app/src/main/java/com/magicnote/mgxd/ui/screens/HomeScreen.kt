@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,6 +31,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -63,8 +65,10 @@ import com.magicnote.mgxd.screentime.ScreenTimeManager
 import com.magicnote.mgxd.ui.viewmodel.CalendarViewModel
 import com.magicnote.mgxd.ui.viewmodel.DiaryViewModel
 import com.magicnote.mgxd.ui.viewmodel.TodoViewModel
+import com.magicnote.mgxd.ui.components.safeEventColor
 import com.magicnote.mgxd.util.HabitEncouragement
 import com.magicnote.mgxd.util.TimeUtils
+import com.magicnote.mgxd.util.RecurrenceHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -123,10 +127,11 @@ fun HomeScreen(
     val today = LocalDate.now()
     // 今日待办/日程/日记：列表变化时才重算过滤，避免每次重组重复遍历
     val todayTodos = remember(todos) { todos.filter { !it.isLongTerm } }
+    // 今日日程：循环日程在这里展开（返回的是 Occurrence，时间用实例时间）
     val todayEvents = remember(events, today) {
-        events.filter {
-            java.time.Instant.ofEpochMilli(it.startTime).atZone(ZoneId.systemDefault()).toLocalDate() == today
-        }
+        val zone = ZoneId.systemDefault()
+        val from = today.atStartOfDay(zone).toInstant().toEpochMilli()
+        RecurrenceHelper.expand(events, from, from + 24L * 60 * 60 * 1000)
     }
     val todayDiaries = remember(diaries, today) {
         diaries.filter {
@@ -278,8 +283,8 @@ fun HomeScreen(
                 if (todayEvents.isEmpty()) {
                     item { EmptyHint("今天没有日程安排") }
                 } else {
-                    items(todayEvents.take(5), key = { "ev_${it.id}" }) { event ->
-                        CompactEventRow(event = event)
+                    items(todayEvents.take(5), key = { "ev_${it.key}" }) { occ ->
+                        CompactEventRow(event = occ.event, start = occ.start, end = occ.end)
                     }
                 }
             }
@@ -375,7 +380,10 @@ private fun CompactHabitRow(habit: HabitEntity, onCheckIn: () -> Unit) {
     val streak = HabitEncouragement.streakOf(habit.checkInDates)
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
     ) {
         Row(
             modifier = Modifier
@@ -410,11 +418,14 @@ private fun CompactCountdownRow(countdown: CountdownEntity) {
     val (label, color) = when {
         days > 0 -> "还有 $days 天" to MaterialTheme.colorScheme.primary
         days == 0L -> "就是今天！🎉" to MaterialTheme.colorScheme.primary
-        else -> "已过 ${-days} 天" to MaterialTheme.colorScheme.outline
+        else -> "已过 ${-days} 天" to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp)
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
     ) {
         Row(
             modifier = Modifier
@@ -528,11 +539,25 @@ private fun CompactTodoRow(todo: TodoEntity, onToggle: () -> Unit) {
 }
 
 @Composable
-private fun CompactEventRow(event: CalendarEventEntity) {
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp)) {
+private fun CompactEventRow(
+    event: CalendarEventEntity,
+    start: Long = event.startTime,
+    end: Long = event.endTime
+) {
+    // M3：低强调卡片；循环日程显示实例时间 + 循环徽标
+    val recurring = event.recurrence.isNotBlank() &&
+        !event.recurrence.equals(RecurrenceHelper.NONE, ignoreCase = true)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(min = 52.dp)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -540,14 +565,27 @@ private fun CompactEventRow(event: CalendarEventEntity) {
                 modifier = Modifier
                     .width(4.dp)
                     .height(28.dp)
-                    .background(Color(event.color), RoundedCornerShape(2.dp))
+                    .background(Color(safeEventColor(event.color)), RoundedCornerShape(2.dp))
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text = "${TimeUtils.formatMillis(event.startTime, "HH:mm")} ${event.title}",
+                text = "${TimeUtils.formatMillis(start, "HH:mm")} ${event.title}",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )
+            if (recurring) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        "↻ " + RecurrenceHelper.label(event),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -560,9 +598,10 @@ private fun CompactEventRow(event: CalendarEventEntity) {
  */
 private fun buildHomeTip(
     todos: List<TodoEntity>,
-    events: List<CalendarEventEntity>,
+    eventOccurrences: List<RecurrenceHelper.Occurrence>,
     diary: DiaryEntity?
 ): String {
+    val events = eventOccurrences.map { it.event }
     val pending = todos.filter { !it.completed }
     val now = System.currentTimeMillis()
     return when {
