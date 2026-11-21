@@ -231,7 +231,15 @@ class ReminderReceiver : BroadcastReceiver() {
         val eventId = intent.getLongExtra(ReminderScheduler.EXTRA_EVENT_ID, -1L)
         if (eventId <= 0) return
         val event = repo.getEvent(eventId) ?: return
-        NotificationHelper.showEventReminder(context, event)
+        val instanceStart = intent.getLongExtra(ReminderScheduler.EXTRA_EVENT_START, event.startTime)
+        NotificationHelper.showEventReminder(context, event, instanceStart)
+
+        // 循环日程：提醒触发后再滚动续排后续实例（否则 14 天窗口用完就不再提醒了）
+        val recurring = event.recurrence.isNotBlank() &&
+            !event.recurrence.equals("NONE", ignoreCase = true)
+        if (recurring) {
+            runCatching { ReminderScheduler.scheduleEventReminder(context, event) }
+        }
     }
 
     private fun todayStartMillis(): Long {
