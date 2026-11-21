@@ -218,8 +218,16 @@ object NotificationHelper {
     }
 
     /** 日程提前提醒：开始前 remindMinutes 分钟通知 */
-    fun showEventReminder(context: Context, event: com.magicnote.mgxd.data.db.CalendarEventEntity) {
-        val timeStr = com.magicnote.mgxd.util.TimeUtils.formatMillis(event.startTime, "HH:mm")
+    /**
+     * 日程提醒通知
+     * @param instanceStart 本次提醒对应的实例开始时间（循环日程的每次发生各不一样；默认用日程自身开始时间）
+     */
+    fun showEventReminder(
+        context: Context,
+        event: com.magicnote.mgxd.data.db.CalendarEventEntity,
+        instanceStart: Long = event.startTime
+    ) {
+        val timeStr = com.magicnote.mgxd.util.TimeUtils.formatMillis(instanceStart, "HH:mm")
         val text = "「${event.title}」将于 $timeStr 开始" +
             if (event.remindMinutes > 0) "（提前 ${event.remindMinutes} 分钟提醒）" else ""
         notify(
