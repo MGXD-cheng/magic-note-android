@@ -170,7 +170,7 @@ fun AppNav(initialTab: Int? = null) {
                     onAddDiary = { showAddDiary = true }
                 )
                 1 -> TodoScreen(vm = todoVm, onAddClick = { showAddTodo = true })
-                2 -> CalendarScreen(vm = calendarVm, countdowns = todoVm.countdowns, onAddClick = { showAddEvent = true })
+                2 -> CalendarScreen(vm = calendarVm, countdowns = todoVm.countdowns, onAddClick = { showAddEvent = true }, settings = settingsVm)
                 3 -> DiaryScreen(
                     vm = diaryVm,
                     onAddClick = { showAddDiary = true },
@@ -234,8 +234,8 @@ fun AppNav(initialTab: Int? = null) {
         AddEventDialog(
             defaultDate = calendarVm.selectedDate.value,
             onDismiss = { showAddEvent = false },
-            onConfirm = { title, start, end, desc, color, remindMinutes ->
-                calendarVm.addEvent(title, start, end, desc, color, remindMinutes)
+            onConfirm = { title, start, end, desc, color, remindMinutes, rec, weekday, until ->
+                calendarVm.addEvent(title, start, end, desc, color, remindMinutes, rec, weekday, until)
                 showAddEvent = false
             }
         )
