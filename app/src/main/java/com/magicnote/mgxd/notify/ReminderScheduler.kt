@@ -29,6 +29,13 @@ object ReminderScheduler {
     const val EXTRA_TODO_ID = "extra_todo_id"
     const val EXTRA_HABIT_ID = "extra_habit_id"
     const val EXTRA_EVENT_ID = "extra_event_id"
+    /** 本次提醒对应的实例开始时间（循环日程用） */
+    const val EXTRA_EVENT_START = "extra_event_start"
+    /** 循环日程向前展开的天数（滚动调度：每次提醒触发后再续上） */
+    private const val RECURRENCE_HORIZON_DAYS = 14L
+    private const val RECURRENCE_HORIZON_MS = RECURRENCE_HORIZON_DAYS * 24L * 60L * 60L * 1000L
+    /** 单条日程最多占用的闹钟槽位（每天重复 14 天 → 16 足够，留余量到 20） */
+    private const val PER_EVENT_SLOTS = 20
 
     /** 日报告触发时间 */
     private const val DAILY_REPORT_HOUR = 22
@@ -201,30 +208,83 @@ object ReminderScheduler {
 
     // ================= 日程提前提醒 =================
 
-    /** 调度单个日程的提前提醒（一次性；remindMinutes<=0 或已过触发时间则忽略） */
+    /**
+     * 调度日程的提前提醒
+     *
+     * - 普通日程：一次性闹钟
+     * - **循环日程：给未来 [RECURRENCE_HORIZON_DAYS] 天内每个实例各排一个闹钟**（每个实例独立 requestCode），
+     *   每次提醒触发后由 Receiver 再调一次本方法滚动续排，所以“每次循环都会提醒”。
+     */
     fun scheduleEventReminder(context: Context, event: CalendarEventEntity) {
         if (event.remindMinutes <= 0) return
-        val triggerAt = event.startTime - event.remindMinutes * 60_000L
-        if (triggerAt <= System.currentTimeMillis()) return
+        val now = System.currentTimeMillis()
         val am = alarmManager(context)
-        val pi = eventPendingIntent(context, event.id)
-        am.cancel(pi)
-        scheduleExact(context, triggerAt, pi)
+        val recurring = event.recurrence.isNotBlank() &&
+            !event.recurrence.equals("NONE", ignoreCase = true)
+
+        if (!recurring) {
+            val triggerAt = event.startTime - event.remindMinutes * 60_000L
+            if (triggerAt <= now) return
+            val pi = eventPendingIntent(context, event.id, event.startTime, 0)
+            am.cancel(pi)
+            scheduleExact(context, triggerAt, pi)
+            return
+        }
+
+        // 循环：先清掉旧槽位，再按实例重新排
+        cancelEventReminder(context, event.id)
+        val occurrences = com.magicnote.mgxd.util.RecurrenceHelper.expand(
+            listOf(event),
+            now - 24L * 60L * 60L * 1000L,
+            now + RECURRENCE_HORIZON_MS
+        )
+        var slot = 0
+        occurrences.forEach { occ ->
+            val triggerAt = occ.start - event.remindMinutes * 60_000L
+            if (triggerAt > now && slot < PER_EVENT_SLOTS) {
+                val pi = eventPendingIntent(context, event.id, occ.start, slot)
+                am.cancel(pi)
+                scheduleExact(context, triggerAt, pi)
+                slot++
+            }
+        }
     }
 
-    /** 取消单个日程的提前提醒 */
+    /** 取消一条日程的所有提醒（含循环日程的全部槽位 + 旧版单槽位） */
     fun cancelEventReminder(context: Context, eventId: Long) {
-        alarmManager(context).cancel(eventPendingIntent(context, eventId))
+        val am = alarmManager(context)
+        for (slot in 0 until PER_EVENT_SLOTS) {
+            am.cancel(eventPendingIntent(context, eventId, 0L, slot))
+        }
+        // 兼容旧版本用 eventId 当 requestCode 排的闹钟
+        am.cancel(
+            PendingIntent.getBroadcast(
+                context,
+                eventId.toInt() and 0x7FFFFFFF,
+                Intent(context, ReminderReceiver::class.java).apply {
+                    action = ACTION_EVENT_REMIND
+                    putExtra(EXTRA_EVENT_ID, eventId)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        )
     }
 
-    private fun eventPendingIntent(context: Context, eventId: Long): PendingIntent {
+    private fun eventPendingIntent(
+        context: Context,
+        eventId: Long,
+        instanceStart: Long = 0L,
+        slot: Int = 0
+    ): PendingIntent {
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             action = ACTION_EVENT_REMIND
             putExtra(EXTRA_EVENT_ID, eventId)
+            if (instanceStart > 0L) putExtra(EXTRA_EVENT_START, instanceStart)
         }
+        val requestCode = ((eventId * 100L + slot).toInt()) and 0x7FFFFFFF
         return PendingIntent.getBroadcast(
             context,
-            eventId.toInt() and 0x7FFFFFFF,
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
