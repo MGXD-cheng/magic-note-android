@@ -134,6 +134,7 @@ You may obtain a copy of the License at
   - 用系统相机 Intent（不需要 CAMERA 权限），临时文件走已有的 FileProvider
   - 提示词要求输出 JSON 数组（title/date/start/end/recurrence/weekday），识别到「每周六」会自动带循环规则
   - 复用 `AiClient` 已有的 OpenAI vision 多模态支持（`ChatMessage.images`）
+- **（8.5 同日更新）修复与增强**：① 修日历「拍照导入」点击闪退 —— 图片改存 `cacheDir/scan/`，并在 `res/xml/file_paths.xml` 声明该 `<cache-path>`（之前放在 cacheDir 根目录，FileProvider 直接抛 `IllegalArgumentException`）；② 新增 **从相册选择**（Photo Picker，无需存储权限）；③ 循环日程提醒改为 **每次循环都提醒**：未来 14 天逐实例排独立闹钟（`requestCode = eventId*100 + slot`），每次触发后由 `ReminderReceiver` 滚动续排，通知文案显示当次实例时间
 - **卡片全部 M3 化（今日 / 待办 / Magic AI）**
   - 待办页：`HabitCard` / `CountdownCard` / `TodoItemCard` → `surfaceContainerLow` + `shapes.large`
   - 首页：`CompactEventRow` / `CompactHabitRow` / `CompactCountdownRow` → `shapes.medium` + `surfaceContainerLow`，行高 52dp
