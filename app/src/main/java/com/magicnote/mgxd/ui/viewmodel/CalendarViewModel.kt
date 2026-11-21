@@ -11,6 +11,7 @@ import com.magicnote.mgxd.data.repo.AppRepository
 import com.magicnote.mgxd.notify.ReminderScheduler
 import com.magicnote.mgxd.util.EventConflictResolver
 import com.magicnote.mgxd.util.TimeUtils
+import com.magicnote.mgxd.util.RecurrenceHelper
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,13 +57,24 @@ class CalendarViewModel(
         _selectedDate.value = date
     }
 
-    fun eventsOn(date: LocalDate): List<CalendarEventEntity> {
+    /** 某天的日程实例（已按循环规则展开） */
+    fun eventsOn(date: LocalDate): List<RecurrenceHelper.Occurrence> {
         val start = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val end = start + 24 * 60 * 60 * 1000
-        return _events.value.filter { it.startTime in start until end }
+        return RecurrenceHelper.expand(_events.value, start, end)
     }
 
-    fun addEvent(title: String, start: Long, end: Long, description: String?, color: Int, remindMinutes: Int = 0) {
+    /** 任意时间窗内的日程实例（月视图圆点） */
+    fun occurrencesBetween(from: Long, to: Long): List<RecurrenceHelper.Occurrence> =
+        RecurrenceHelper.expand(_events.value, from, to)
+
+    fun addEvent(
+        title: String, start: Long, end: Long, description: String?, color: Int,
+        remindMinutes: Int = 0,
+        recurrence: String = RecurrenceHelper.NONE,
+        recurrenceWeekday: Int = 0,
+        recurrenceUntil: Long = 0L
+    ) {
         viewModelScope.launch {
             // 时间冲突自动对齐：更早的日程结束时间对齐到本日程开始（必要时本日程再顺延）
             val aligned = EventConflictResolver.resolve(start, end, _events.value)
@@ -71,7 +83,9 @@ class CalendarViewModel(
             val id = repo.insertEvent(
                 CalendarEventEntity(
                     title = title, startTime = s, endTime = e,
-                    description = description, color = color, remindMinutes = remindMinutes
+                    description = description, color = color, remindMinutes = remindMinutes,
+                    recurrence = recurrence, recurrenceWeekday = recurrenceWeekday,
+                    recurrenceUntil = recurrenceUntil
                 )
             )
             if (s != start) {
