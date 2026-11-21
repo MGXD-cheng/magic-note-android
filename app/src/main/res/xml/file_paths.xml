@@ -2,5 +2,7 @@
 <!-- FileProvider 路径：应用内更新下载的 APK 放在 cache/apk_update 下 -->
 <paths>
     <cache-path name="apk_update" path="apk_update/" />
+    <!-- 日程拍照导入的临时图片（cacheDir/scan/） -->
+    <cache-path name="scan" path="scan/" />
     <files-path name="files" path="." />
 </paths>
