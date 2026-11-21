@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -45,6 +47,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -84,8 +88,10 @@ import com.magicnote.mgxd.ui.components.EVENT_COLORS
 import com.magicnote.mgxd.ui.components.EVENT_COLOR_ARGB
 import com.magicnote.mgxd.ui.components.safeEventColor
 import com.magicnote.mgxd.ui.viewmodel.CalendarViewModel
+import com.magicnote.mgxd.ui.viewmodel.SettingsViewModel
 import com.magicnote.mgxd.ui.viewmodel.CalendarViewModel.PlanState
 import com.magicnote.mgxd.util.TimeUtils
+import com.magicnote.mgxd.util.RecurrenceHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
@@ -101,8 +107,10 @@ import java.time.format.DateTimeFormatter
 fun CalendarScreen(
     vm: CalendarViewModel,
     countdowns: StateFlow<List<CountdownEntity>>,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    settings: SettingsViewModel? = null
 ) {
+    var showScanImport by remember { mutableStateOf(false) }
     val selectedDate by vm.selectedDate.collectAsStateWithLifecycle()
     val events by vm.events.collectAsStateWithLifecycle()
     val countdownList by countdowns.collectAsStateWithLifecycle()
@@ -111,7 +119,19 @@ fun CalendarScreen(
     var editTarget by remember { mutableStateOf<CalendarEventEntity?>(null) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // 选中日日程实例（已按循环规则展开）
     val selectedEvents = remember(events, selectedDate) { vm.eventsOn(selectedDate) }
+    // 月视图：日期 → 颜色列表（循环日程已展开，跨月前后各留 7 天覆盖折叠周的边缘）
+    val eventColorsByDate = remember(events, currentMonth) {
+        val zone = java.time.ZoneId.systemDefault()
+        val from = currentMonth.atDay(1).minusDays(7)
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+        val to = currentMonth.atEndOfMonth().plusDays(8)
+            .atStartOfDay(zone).toInstant().toEpochMilli()
+        vm.occurrencesBetween(from, to)
+            .groupBy { java.time.Instant.ofEpochMilli(it.start).atZone(zone).toLocalDate() }
+            .mapValues { (_, list) -> list.map { it.event.color } }
+    }
     // 倒数日日期集合（月视图红色圆点）+ 选中日当天的倒数日
     val countdownDates = remember(countdownList) {
         countdownList.map { Instant.ofEpochMilli(it.targetDate).atZone(ZoneId.systemDefault()).toLocalDate() }.toSet()
@@ -159,7 +179,7 @@ fun CalendarScreen(
         MonthGrid(
             month = currentMonth,
             selectedDate = selectedDate,
-            events = events,
+            eventColorsByDate = eventColorsByDate,
             countdownDates = countdownDates,
             collapsed = calendarCollapsed,
             onSelectDate = { vm.selectDate(it) }
@@ -177,10 +197,21 @@ fun CalendarScreen(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
-            OutlinedButton(onClick = onAddClick) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(Modifier.width(4.dp))
-                Text("新建日程")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedButton(onClick = onAddClick) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("新建日程")
+                }
+                if (settings != null) {
+                    IconButton(onClick = { showScanImport = true }) {
+                        Icon(
+                            Icons.Default.PhotoCamera,
+                            contentDescription = "拍照导入日程",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -204,12 +235,16 @@ fun CalendarScreen(
                     )
                 }
             } else {
-                items(selectedEvents, key = { "ev_${it.id}" }) { event ->
+                items(selectedEvents, key = { "ev_${it.key}" }) { occ ->
                     EventCard(
-                        event = event,
-                        onClick = { editTarget = event },
-                        onDelete = { deleteTarget = event },
-                        onFocus = { focusEvent = event }
+                        event = occ.event,
+                        displayStart = occ.start,
+                        displayEnd = occ.end,
+                        recurringLabel = if (occ.isRecurring)
+                            RecurrenceHelper.label(occ.event) else null,
+                        onClick = { editTarget = occ.event },
+                        onDelete = { deleteTarget = occ.event },
+                        onFocus = { focusEvent = occ.event }
                     )
                 }
             }
@@ -222,9 +257,13 @@ fun CalendarScreen(
     }
 
     deleteTarget?.let { event ->
+        val isRecurring = event.recurrence.isNotBlank() && event.recurrence != RecurrenceHelper.NONE
         ConfirmDialog(
-            title = "删除日程",
-            text = "确定要删除「${event.title}」吗？",
+            title = if (isRecurring) "删除循环日程" else "删除日程",
+            text = if (isRecurring)
+                "「${event.title}」是循环日程（${RecurrenceHelper.label(event)}），删除会移除整组所有重复日程。"
+            else
+                "确定要删除「${event.title}」吗？",
             onConfirm = {
                 vm.deleteEvent(event)
                 deleteTarget = null
@@ -244,6 +283,14 @@ fun CalendarScreen(
         )
     }
 
+    if (showScanImport && settings != null) {
+        CalendarScanImportDialog(
+            settings = settings,
+            vm = vm,
+            onDismiss = { showScanImport = false }
+        )
+    }
+
     // 点击日程卡片 → 编辑（预填原内容）
     editTarget?.let { event ->
         AddEventDialog(
@@ -253,8 +300,10 @@ fun CalendarScreen(
             initialEnd = event.endTime,
             initialColor = event.color,
             initialRemindMinutes = event.remindMinutes,
+            initialRecurrence = event.recurrence,
+            initialRecurrenceWeekday = event.recurrenceWeekday,
             onDismiss = { editTarget = null },
-            onConfirm = { title, start, end, desc, color, remindMinutes ->
+            onConfirm = { title, start, end, desc, color, remindMinutes, rec, weekday, until ->
                 vm.updateEvent(
                     event.copy(
                         title = title,
@@ -262,7 +311,10 @@ fun CalendarScreen(
                         endTime = end,
                         description = desc,
                         color = color,
-                        remindMinutes = remindMinutes
+                        remindMinutes = remindMinutes,
+                        recurrence = rec,
+                        recurrenceWeekday = weekday,
+                        recurrenceUntil = until
                     )
                 )
                 editTarget = null
@@ -330,7 +382,7 @@ private fun MonthHeader(
 private fun MonthGrid(
     month: YearMonth,
     selectedDate: LocalDate,
-    events: List<CalendarEventEntity>,
+    eventColorsByDate: Map<LocalDate, List<Int>>,
     countdownDates: Set<LocalDate>,
     collapsed: Boolean,
     onSelectDate: (LocalDate) -> Unit
@@ -360,9 +412,9 @@ private fun MonthGrid(
                         date = date,
                         isSelected = date == selectedDate,
                         isToday = date == LocalDate.now(),
-                        hasEvents = events.any { isSameDay(it.startTime, date) },
+                        hasEvents = eventColorsByDate[date].orEmpty().isNotEmpty(),
                         hasCountdown = date in countdownDates,
-                        eventColors = events.filter { isSameDay(it.startTime, date) }.map { Color(safeEventColor(it.color)) },
+                        eventColors = eventColorsByDate[date].orEmpty().map { Color(safeEventColor(it)) },
                         onClick = { onSelectDate(date) },
                         modifier = Modifier.weight(1f)
                     )
@@ -385,9 +437,9 @@ private fun MonthGrid(
                             date = date,
                             isSelected = date == selectedDate,
                             isToday = date == LocalDate.now(),
-                            hasEvents = events.any { isSameDay(it.startTime, date) },
+                            hasEvents = eventColorsByDate[date].orEmpty().isNotEmpty(),
                             hasCountdown = date in countdownDates,
-                            eventColors = events.filter { isSameDay(it.startTime, date) }.map { Color(safeEventColor(it.color)) },
+                            eventColors = eventColorsByDate[date].orEmpty().map { Color(safeEventColor(it)) },
                             onClick = { onSelectDate(date) },
                             modifier = Modifier.weight(1f)
                         )
@@ -512,7 +564,10 @@ private fun EventCard(
     event: CalendarEventEntity,
     onClick: () -> Unit,
     onDelete: () -> Unit,
-    onFocus: () -> Unit
+    onFocus: () -> Unit,
+    displayStart: Long = event.startTime,
+    displayEnd: Long = event.endTime,
+    recurringLabel: String? = null
 ) {
     Card(
         onClick = onClick,
@@ -535,9 +590,30 @@ private fun EventCard(
             )
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(event.title, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        event.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (recurringLabel != null) {
+                        Spacer(Modifier.width(6.dp))
+                        // 循环徽标：M3 小尺寸 tonal 标签
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Text(
+                                "↻ " + recurringLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
                 Text(
-                    text = "${TimeUtils.formatMillis(event.startTime, "HH:mm")} - ${TimeUtils.formatMillis(event.endTime, "HH:mm")}",
+                    text = "${TimeUtils.formatMillis(displayStart, "HH:mm")} - ${TimeUtils.formatMillis(displayEnd, "HH:mm")}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -769,8 +845,13 @@ fun AddEventDialog(
     initialEnd: Long? = null,
     initialColor: Int? = null,
     initialRemindMinutes: Int = 0,
+    initialRecurrence: String = RecurrenceHelper.NONE,
+    initialRecurrenceWeekday: Int = 0,
     onDismiss: () -> Unit,
-    onConfirm: (title: String, start: Long, end: Long, description: String?, color: Int, remindMinutes: Int) -> Unit
+    onConfirm: (
+        title: String, start: Long, end: Long, description: String?, color: Int,
+        remindMinutes: Int, recurrence: String, recurrenceWeekday: Int, recurrenceUntil: Long
+    ) -> Unit
 ) {
     var title by remember(initialTitle) { mutableStateOf(initialTitle) }
     var description by remember(initialDescription) { mutableStateOf(initialDescription) }
@@ -784,6 +865,11 @@ fun AddEventDialog(
     var showEndPicker by remember { mutableStateOf(false) }
     var remindMinutes by remember(initialRemindMinutes) { mutableStateOf(initialRemindMinutes) }
     var showRemindPicker by remember { mutableStateOf(false) }
+    // 循环规则（NONE/DAILY/WEEKLY/MONTHLY + WEEKLY 的星期几）
+    var recurrence by remember(initialRecurrence) {
+        mutableStateOf(initialRecurrence.ifBlank { RecurrenceHelper.NONE })
+    }
+    var recurrenceWeekday by remember(initialRecurrenceWeekday) { mutableStateOf(initialRecurrenceWeekday) }
 
     val defaultStart = defaultDate.atTime(9, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     val defaultEnd = defaultDate.atTime(10, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -829,6 +915,61 @@ fun AddEventDialog(
                     Text("⏰ 提醒：${remindMinutesLabel(remindMinutes)}")
                 }
                 Column {
+                    Text("重复", style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            RecurrenceHelper.NONE to "不重复",
+                            RecurrenceHelper.DAILY to "每天",
+                            RecurrenceHelper.WEEKLY to "每周",
+                            RecurrenceHelper.MONTHLY to "每月"
+                        ).forEach { (value, label) ->
+                            FilterChip(
+                                selected = recurrence == value,
+                                onClick = {
+                                    recurrence = value
+                                    // 选「每周」且未指定过星期几 → 默认跟随本次的开始日期
+                                    if (value == RecurrenceHelper.WEEKLY && recurrenceWeekday !in 1..7) {
+                                        recurrenceWeekday = Instant.ofEpochMilli(start)
+                                            .atZone(ZoneId.systemDefault()).dayOfWeek.value
+                                    }
+                                },
+                                label = { Text(label) }
+                            )
+                        }
+                    }
+                    if (recurrence == RecurrenceHelper.WEEKLY) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            RecurrenceHelper.WEEKDAY_OPTIONS.forEach { (iso, label) ->
+                                FilterChip(
+                                    selected = recurrenceWeekday == iso,
+                                    onClick = { recurrenceWeekday = iso },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
+                    }
+                    if (recurrence != RecurrenceHelper.NONE) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "循环日程在日历里会自动重复出现；删除时会整组一起删除",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Column {
                     Text("颜色", style = MaterialTheme.typography.labelMedium)
                     Spacer(Modifier.height(4.dp))
                     ColorSelector(selected = colorIndex, onSelect = { colorIndex = it; customColor = null })
@@ -846,7 +987,10 @@ fun AddEventDialog(
                                 if (colorIndex >= 0) EVENT_COLOR_ARGB[colorIndex]
                                 else customColor ?: EVENT_COLOR_ARGB[0]
                             ),
-                            remindMinutes
+                            remindMinutes,
+                            recurrence,
+                            if (recurrence == RecurrenceHelper.WEEKLY) recurrenceWeekday else 0,
+                            0L
                         )
                     }
                 },
